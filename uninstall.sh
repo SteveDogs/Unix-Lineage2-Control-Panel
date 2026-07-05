@@ -12,7 +12,7 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
-rm -f "$BIN_DIR/l2" "$BIN_DIR/l2ctl" "$BIN_DIR/l2ps" "$BIN_DIR/l2doctor"
+rm -f "$BIN_DIR/l2" "$BIN_DIR/l2menu" "$BIN_DIR/l2ctl" "$BIN_DIR/l2ps" "$BIN_DIR/l2doctor"
 
 if [ "${1:-}" = "--purge" ]; then
   rm -rf "$INSTALL_DIR" "$CONFIG_DIR" "$STATE_DIR"

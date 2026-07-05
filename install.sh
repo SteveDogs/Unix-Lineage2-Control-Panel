@@ -38,6 +38,7 @@ chmod +x "$INSTALL_DIR"/bin/*
 chmod +x "$INSTALL_DIR/install.sh" 2>/dev/null || true
 
 ln -sfn "$INSTALL_DIR/bin/l2" "$BIN_DIR/l2"
+ln -sfn "$INSTALL_DIR/bin/l2menu" "$BIN_DIR/l2menu"
 ln -sfn "$INSTALL_DIR/bin/l2ctl" "$BIN_DIR/l2ctl"
 ln -sfn "$INSTALL_DIR/bin/l2ps" "$BIN_DIR/l2ps"
 ln -sfn "$INSTALL_DIR/bin/l2doctor" "$BIN_DIR/l2doctor"
@@ -45,4 +46,4 @@ ln -sfn "$INSTALL_DIR/bin/l2doctor" "$BIN_DIR/l2doctor"
 echo "Installed to $INSTALL_DIR"
 echo "Config directory: $CONFIG_DIR"
 echo "State directory: $STATE_DIR"
-echo "Commands: l2, l2ctl, l2ps, l2doctor"
+echo "Commands: l2, l2menu, l2ctl, l2ps, l2doctor"
