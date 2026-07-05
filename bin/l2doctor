@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -u
+
+SOURCE_FILE=$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$SOURCE_FILE")" && pwd)
+UNIX_L2_CP_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+export UNIX_L2_CP_ROOT
+
+# shellcheck disable=SC1091
+. "$UNIX_L2_CP_ROOT/lib/common.sh"
+# shellcheck disable=SC1091
+. "$UNIX_L2_CP_ROOT/lib/config.sh"
+# shellcheck disable=SC1091
+. "$UNIX_L2_CP_ROOT/lib/process.sh"
+
+load_settings
+load_server_configs >/dev/null 2>&1 || true
+
+check_cmd() {
+  if command -v "$1" >/dev/null 2>&1; then
+    printf '[OK]    command: %s\n' "$1"
+  else
+    printf '[WARN]  command: %s is missing\n' "$1"
+  fi
+}
+
+check_path() {
+  if [ -e "$2" ]; then
+    printf '[OK]    %s: %s\n' "$1" "$2"
+  else
+    printf '[WARN]  %s: missing %s\n' "$1" "$2"
+  fi
+}
+
+printf 'Project : %s\n' "$UNIX_L2_CP_NAME"
+printf 'Version : %s\n' "$UNIX_L2_CP_VERSION"
+printf 'Config  : %s\n' "$UNIX_L2_CP_CONFIG_DIR"
+printf 'Servers : %s\n\n' "$UNIX_L2_CP_SERVER_DIR"
+
+check_cmd bash
+check_cmd awk
+check_cmd grep
+check_cmd pgrep
+check_cmd readlink
+check_cmd ss
+check_cmd tail
+check_cmd su
+printf '\n'
+
+if [ "${#UL2CP_SERVER_IDS[@]}" -eq 0 ]; then
+  printf '[WARN]  no server configs found in %s\n' "$UNIX_L2_CP_SERVER_DIR"
+  exit 0
+fi
+
+for id in "${UL2CP_SERVER_IDS[@]}"; do
+  printf 'Server  : %s (%s)\n' "$(server_label "$id")" "$id"
+  printf 'Owner   : %s\n' "$(server_owner "$id")"
+
+  if component_enabled "$id" login; then
+    check_path "login dir" "$(component_dir "$id" login)"
+    check_path "login loop" "$(component_dir "$id" login)/$(component_loop "$id" login)"
+    printf 'login status: %s\n' "$(component_status_text "$id" login)"
+  else
+    printf 'login status: DISABLED\n'
+  fi
+
+  if component_enabled "$id" game; then
+    check_path "game dir" "$(component_dir "$id" game)"
+    check_path "game loop" "$(component_dir "$id" game)/$(component_loop "$id" game)"
+    printf 'game status : %s\n' "$(component_status_text "$id" game)"
+  else
+    printf 'game status : DISABLED\n'
+  fi
+
+  printf '\n'
+done

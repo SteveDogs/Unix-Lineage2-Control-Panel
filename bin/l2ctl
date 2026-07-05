@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+set -u
+
+SOURCE_FILE=$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$SOURCE_FILE")" && pwd)
+UNIX_L2_CP_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+export UNIX_L2_CP_ROOT
+
+# shellcheck disable=SC1091
+. "$UNIX_L2_CP_ROOT/lib/common.sh"
+# shellcheck disable=SC1091
+. "$UNIX_L2_CP_ROOT/lib/config.sh"
+# shellcheck disable=SC1091
+. "$UNIX_L2_CP_ROOT/lib/process.sh"
+
+load_settings
+
+usage() {
+  cat <<'EOF'
+Unix Lineage2 Control Panel
+
+Usage:
+  l2ctl status
+  l2ctl full
+  l2ctl all
+  l2ctl start <server> [login|game|both]
+  l2ctl stop <server> [login|game|both]
+  l2ctl restart <server> [login|game|both]
+  l2ctl logs <server> <login|game> [lines]
+  l2ctl follow <server> <login|game> [lines]
+EOF
+}
+
+require_configs() {
+  load_server_configs >/dev/null 2>&1 || {
+    printf 'No server configs found in %s\n' "$UNIX_L2_CP_SERVER_DIR"
+    return 1
+  }
+}
+
+ensure_server() {
+  server_exists "$1" || {
+    printf 'Unknown server: %s\n' "$1"
+    return 1
+  }
+}
+
+ensure_role() {
+  case "$1" in
+    login|game|both) return 0 ;;
+    *) printf 'Unknown role: %s\n' "$1"; return 1 ;;
+  esac
+}
+
+status_table() {
+  local id
+  printf '%-16s %-24s %-24s\n' "SERVER" "LOGIN" "GAME"
+  for id in "${UL2CP_SERVER_IDS[@]}"; do
+    printf '%-16s %-24s %-24s\n' \
+      "$(server_label "$id")" \
+      "$(component_status_text "$id" login)" \
+      "$(component_status_text "$id" game)"
+  done
+}
+
+full_status() {
+  local id
+  local role
+  for id in "${UL2CP_SERVER_IDS[@]}"; do
+    printf 'Server : %s (%s)\n' "$(server_label "$id")" "$id"
+    printf 'Owner  : %s\n' "$(server_owner "$id")"
+    for role in login game; do
+      printf '%s : %s\n' "$role" "$(component_status_text "$id" "$role")"
+      if component_enabled "$id" "$role"; then
+        printf '  dir  : %s\n' "$(component_dir "$id" "$role")"
+        printf '  loop : %s\n' "$(component_loop "$id" "$role")"
+        printf '  log  : %s\n' "$(component_log_path "$id" "$role")"
+      fi
+    done
+    printf '\n'
+  done
+}
+
+process_rows() {
+  local include_loops
+  local id
+  local role
+  local pid
+  local ppid
+  local user
+  local cwd
+  local cmd
+  local ports
+
+  include_loops="$1"
+  printf '%-16s %-6s %-7s %-7s %-10s %-10s %-40s %s\n' "SERVER" "ROLE" "PID" "PPID" "USER" "PORT" "CWD" "CMD"
+
+  for id in "${UL2CP_SERVER_IDS[@]}"; do
+    for role in login game; do
+      if component_enabled "$id" "$role"; then
+        for pid in $(find_java_pids "$id" "$role"); do
+          ppid=$(ps -o ppid= -p "$pid" | awk '{print $1}')
+          user=$(ps -o user= -p "$pid" | awk '{print $1}')
+          cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || printf '?')
+          cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || printf '')
+          ports=$(ports_for_pid "$pid")
+          printf '%-16s %-6s %-7s %-7s %-10s %-10s %-40s %s\n' \
+            "$(server_label "$id")" "$role" "$pid" "$ppid" "$user" "${ports:--}" "$cwd" "$cmd"
+        done
+
+        if [ "$include_loops" = "1" ]; then
+          for pid in $(find_loop_pids "$id" "$role"); do
+            ppid=$(ps -o ppid= -p "$pid" | awk '{print $1}')
+            user=$(ps -o user= -p "$pid" | awk '{print $1}')
+            cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || printf '?')
+            cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || printf '')
+            printf '%-16s %-6s %-7s %-7s %-10s %-10s %-40s %s\n' \
+              "$(server_label "$id")" "loop" "$pid" "$ppid" "$user" "-" "$cwd" "$cmd"
+          done
+        fi
+      fi
+    done
+  done
+}
+
+run_role_group() {
+  local action
+  local id
+  local target
+  local role
+  local rc
+
+  action="$1"
+  id="$2"
+  target="$3"
+  rc=0
+
+  case "$target" in
+    both) set -- login game ;;
+    *) set -- "$target" ;;
+  esac
+
+  for role in "$@"; do
+    case "$action" in
+      start) start_component "$id" "$role" || rc=1 ;;
+      stop) stop_component "$id" "$role" || rc=1 ;;
+      restart) restart_component "$id" "$role" || rc=1 ;;
+    esac
+  done
+
+  return "$rc"
+}
+
+require_configs || exit 1
+
+case "${1:-}" in
+  status)
+    status_table
+    ;;
+  full)
+    full_status
+    ;;
+  all)
+    process_rows 1
+    ;;
+  start|stop|restart)
+    ensure_server "${2:-}" || exit 1
+    ensure_role "${3:-both}" || exit 1
+    run_role_group "$1" "$2" "${3:-both}"
+    ;;
+  logs)
+    ensure_server "${2:-}" || exit 1
+    ensure_role "${3:-}" || exit 1
+    [ "${3:-}" != "both" ] || { printf 'Use login or game for logs\n'; exit 1; }
+    show_component_logs "$2" "$3" "${4:-40}"
+    ;;
+  follow)
+    ensure_server "${2:-}" || exit 1
+    ensure_role "${3:-}" || exit 1
+    [ "${3:-}" != "both" ] || { printf 'Use login or game for logs\n'; exit 1; }
+    follow_component_logs "$2" "$3" "${4:-40}"
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac

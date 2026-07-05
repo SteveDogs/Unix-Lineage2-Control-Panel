@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+
+tr_text() {
+  local lang
+  lang="${UNIX_L2_CP_LANG:-ru}"
+
+  case "$lang:$1" in
+    ru:menu_status) echo "Краткий статус" ;;
+    ru:menu_full) echo "Полный статус" ;;
+    ru:menu_start) echo "Запустить" ;;
+    ru:menu_stop) echo "Остановить" ;;
+    ru:menu_restart) echo "Перезапустить" ;;
+    ru:menu_logs) echo "Показать лог" ;;
+    ru:menu_follow) echo "Следить за логом" ;;
+    ru:menu_doctor) echo "Диагностика" ;;
+    ru:menu_language) echo "Язык" ;;
+    ru:menu_about) echo "О панели" ;;
+    ru:menu_exit) echo "Выход" ;;
+    ru:prompt_choose) echo "Выбор" ;;
+    ru:prompt_lines) echo "Сколько строк показать" ;;
+    ru:prompt_enter) echo "Нажмите Enter для продолжения..." ;;
+    ru:prompt_confirm) echo "Подтвердить действие" ;;
+    ru:choose_server) echo "Выберите сервер" ;;
+    ru:choose_component) echo "Выберите компонент" ;;
+    ru:choose_language) echo "Выберите язык" ;;
+    ru:yes) echo "Да" ;;
+    ru:no) echo "Нет" ;;
+    ru:back) echo "Назад" ;;
+    ru:login) echo "login" ;;
+    ru:game) echo "game" ;;
+    ru:both) echo "both" ;;
+    ru:warn_live) echo "Внимание: действие затронет живой сервер." ;;
+    ru:about_title) echo "Простая панель для управления Lineage 2 серверами на Unix/Linux." ;;
+    ru:about_lang) echo "Поддерживаются русский, английский и украинский языки." ;;
+    ru:about_cfg) echo "Все серверы описываются отдельными конфигами." ;;
+    ru:follow_hint) echo "Для выхода из онлайн лога нажмите Ctrl+C." ;;
+    ru:wrong_choice) echo "Неверный выбор. Попробуйте еще раз." ;;
+
+    en:menu_status) echo "Short status" ;;
+    en:menu_full) echo "Full status" ;;
+    en:menu_start) echo "Start" ;;
+    en:menu_stop) echo "Stop" ;;
+    en:menu_restart) echo "Restart" ;;
+    en:menu_logs) echo "Show log" ;;
+    en:menu_follow) echo "Follow log" ;;
+    en:menu_doctor) echo "Diagnostics" ;;
+    en:menu_language) echo "Language" ;;
+    en:menu_about) echo "About" ;;
+    en:menu_exit) echo "Exit" ;;
+    en:prompt_choose) echo "Choose" ;;
+    en:prompt_lines) echo "How many lines to show" ;;
+    en:prompt_enter) echo "Press Enter to continue..." ;;
+    en:prompt_confirm) echo "Confirm action" ;;
+    en:choose_server) echo "Choose server" ;;
+    en:choose_component) echo "Choose component" ;;
+    en:choose_language) echo "Choose language" ;;
+    en:yes) echo "Yes" ;;
+    en:no) echo "No" ;;
+    en:back) echo "Back" ;;
+    en:login) echo "login" ;;
+    en:game) echo "game" ;;
+    en:both) echo "both" ;;
+    en:warn_live) echo "Warning: this action affects a live server." ;;
+    en:about_title) echo "Simple panel for managing Lineage 2 servers on Unix/Linux." ;;
+    en:about_lang) echo "Russian, English, and Ukrainian are supported." ;;
+    en:about_cfg) echo "Each server is described by a separate config file." ;;
+    en:follow_hint) echo "Press Ctrl+C to stop live log view." ;;
+    en:wrong_choice) echo "Wrong choice. Please try again." ;;
+
+    uk:menu_status) echo "Короткий статус" ;;
+    uk:menu_full) echo "Повний статус" ;;
+    uk:menu_start) echo "Запустити" ;;
+    uk:menu_stop) echo "Зупинити" ;;
+    uk:menu_restart) echo "Перезапустити" ;;
+    uk:menu_logs) echo "Показати лог" ;;
+    uk:menu_follow) echo "Слідкувати за логом" ;;
+    uk:menu_doctor) echo "Діагностика" ;;
+    uk:menu_language) echo "Мова" ;;
+    uk:menu_about) echo "Про панель" ;;
+    uk:menu_exit) echo "Вихід" ;;
+    uk:prompt_choose) echo "Вибір" ;;
+    uk:prompt_lines) echo "Скільки рядків показати" ;;
+    uk:prompt_enter) echo "Натисніть Enter для продовження..." ;;
+    uk:prompt_confirm) echo "Підтвердити дію" ;;
+    uk:choose_server) echo "Виберіть сервер" ;;
+    uk:choose_component) echo "Виберіть компонент" ;;
+    uk:choose_language) echo "Виберіть мову" ;;
+    uk:yes) echo "Так" ;;
+    uk:no) echo "Ні" ;;
+    uk:back) echo "Назад" ;;
+    uk:login) echo "login" ;;
+    uk:game) echo "game" ;;
+    uk:both) echo "both" ;;
+    uk:warn_live) echo "Увага: дія вплине на живий сервер." ;;
+    uk:about_title) echo "Проста панель для керування Lineage 2 серверами на Unix/Linux." ;;
+    uk:about_lang) echo "Підтримуються російська, англійська та українська мови." ;;
+    uk:about_cfg) echo "Кожен сервер описується окремим конфігом." ;;
+    uk:follow_hint) echo "Щоб вийти з онлайн лога, натисніть Ctrl+C." ;;
+    uk:wrong_choice) echo "Невірний вибір. Спробуйте ще раз." ;;
+
+    *) echo "$1" ;;
+  esac
+}

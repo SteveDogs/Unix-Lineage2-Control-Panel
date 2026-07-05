@@ -1,0 +1,17 @@
+SERVER_ID="lucera_classic"
+SERVER_NAME="Lucera Classic"
+SERVER_OWNER="games"
+
+LOGIN_ENABLED="true"
+LOGIN_DIR="/home/games/LuceraClassic/loginserver"
+LOGIN_LOOP="AuthServer_loop.sh"
+LOGIN_MATCH="AuthServer"
+LOGIN_LOG="log/stdout.log"
+LOGIN_PORT_HINT="2106"
+
+GAME_ENABLED="true"
+GAME_DIR="/home/games/LuceraClassic/gameserver"
+GAME_LOOP="GameServer_loop.sh"
+GAME_MATCH="GameServer"
+GAME_LOG="log/stdout.log"
+GAME_PORT_HINT="7777"

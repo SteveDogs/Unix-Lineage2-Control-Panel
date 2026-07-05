@@ -1,0 +1,5 @@
+# Global settings for Unix Lineage2 Control Panel
+
+UNIX_L2_CP_LANG="ru"
+UNIX_L2_CP_STOP_TIMEOUT="30"
+UNIX_L2_CP_START_WAIT="2"
