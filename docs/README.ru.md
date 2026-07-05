@@ -11,11 +11,16 @@
 Этот проект делает понятную панель и команды:
 
 - краткий статус по серверам
+- цветной статус с режимами LIVE и MAINT
 - полный список процессов
+- карточка сервера с путями, PID, портами и логами
 - запуск
 - остановка
 - перезапуск
+- массовые действия по всем серверам
+- режим обслуживания
 - просмотр логов
+- проверки после запуска: PID, порт, лог, ready text
 - диагностика перед первым запуском
 
 ## Установка
@@ -60,9 +65,12 @@ sudo nano /etc/unix-l2-control-panel/servers.d/myserver.conf
 ```bash
 l2ctl status
 l2ctl full
+l2ctl card myserver
 l2ctl start myserver game
+l2ctl restart all login
+l2ctl maintenance myserver on
+l2ctl maintenance all status
 l2ctl stop myserver login
-l2ctl restart myserver both
 l2ctl logs myserver game 50
 l2ctl follow myserver login 100
 l2doctor
@@ -83,6 +91,7 @@ LOGIN_LOOP="AuthServer_loop.sh"
 LOGIN_MATCH="AuthServer"
 LOGIN_LOG="log/stdout.log"
 LOGIN_PORT_HINT="2106"
+LOGIN_READY_MATCH=""
 
 GAME_ENABLED="true"
 GAME_DIR="/home/games/gameserver"
@@ -90,7 +99,10 @@ GAME_LOOP="GameServer_loop.sh"
 GAME_MATCH="GameServer"
 GAME_LOG="log/stdout.log"
 GAME_PORT_HINT="7777"
+GAME_READY_MATCH=""
 ```
+
+`LOGIN_READY_MATCH` и `GAME_READY_MATCH` можно оставить пустыми или указать текст из лога, по которому панель поймет, что сервер действительно поднялся.
 
 ## Языки
 

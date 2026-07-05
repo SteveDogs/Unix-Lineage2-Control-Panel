@@ -6,6 +6,7 @@ INSTALL_DIR="${INSTALL_DIR:-/opt/$PROJECT_NAME}"
 BIN_DIR="${BIN_DIR:-/usr/local/bin}"
 CONFIG_DIR="${CONFIG_DIR:-/etc/unix-l2-control-panel}"
 SERVER_DIR="$CONFIG_DIR/servers.d"
+STATE_DIR="${STATE_DIR:-/var/lib/unix-l2-control-panel}"
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Please run install.sh with sudo or as root."
@@ -14,7 +15,7 @@ fi
 
 SRC_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-mkdir -p "$INSTALL_DIR" "$BIN_DIR" "$CONFIG_DIR" "$SERVER_DIR"
+mkdir -p "$INSTALL_DIR" "$BIN_DIR" "$CONFIG_DIR" "$SERVER_DIR" "$STATE_DIR/maintenance"
 
 cp -a "$SRC_DIR/README.md" "$INSTALL_DIR/"
 cp -a "$SRC_DIR/LICENSE" "$INSTALL_DIR/"
@@ -43,4 +44,5 @@ ln -sfn "$INSTALL_DIR/bin/l2doctor" "$BIN_DIR/l2doctor"
 
 echo "Installed to $INSTALL_DIR"
 echo "Config directory: $CONFIG_DIR"
+echo "State directory: $STATE_DIR"
 echo "Commands: l2, l2ctl, l2ps, l2doctor"

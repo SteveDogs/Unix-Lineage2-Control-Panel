@@ -5,7 +5,7 @@ if [ -z "${UNIX_L2_CP_ROOT:-}" ]; then
 fi
 
 UNIX_L2_CP_NAME="Unix Lineage2 Control Panel"
-UNIX_L2_CP_VERSION="1.0.0"
+UNIX_L2_CP_VERSION="1.1.0"
 UNIX_L2_CP_SITE="https://steve.dog"
 UNIX_L2_CP_AUTHOR="Steve Dog"
 UNIX_L2_CP_COPYRIGHT="Copyright (c) 2026 Steve Dog"
@@ -13,17 +13,48 @@ UNIX_L2_CP_COPYRIGHT="Copyright (c) 2026 Steve Dog"
 UNIX_L2_CP_CONFIG_DIR="${UNIX_L2_CP_CONFIG_DIR:-/etc/unix-l2-control-panel}"
 UNIX_L2_CP_SERVER_DIR="${UNIX_L2_CP_SERVER_DIR:-$UNIX_L2_CP_CONFIG_DIR/servers.d}"
 UNIX_L2_CP_SETTINGS_FILE="${UNIX_L2_CP_SETTINGS_FILE:-$UNIX_L2_CP_CONFIG_DIR/settings.conf}"
+UNIX_L2_CP_STATE_DIR="${UNIX_L2_CP_STATE_DIR:-/var/lib/unix-l2-control-panel}"
 UNIX_L2_CP_STOP_TIMEOUT="${UNIX_L2_CP_STOP_TIMEOUT:-30}"
 UNIX_L2_CP_START_WAIT="${UNIX_L2_CP_START_WAIT:-2}"
+UNIX_L2_CP_START_VERIFY_WAIT="${UNIX_L2_CP_START_VERIFY_WAIT:-15}"
+UNIX_L2_CP_READY_LOG_LINES="${UNIX_L2_CP_READY_LOG_LINES:-200}"
 UNIX_L2_CP_LANG="${UNIX_L2_CP_LANG:-ru}"
 
 load_settings() {
+  local env_server_dir
+  local env_settings_file
+  local env_state_dir
+  local env_stop_timeout
+  local env_start_wait
+  local env_verify_wait
+  local env_ready_lines
+  local env_lang
+
+  env_server_dir="${UNIX_L2_CP_SERVER_DIR:-}"
+  env_settings_file="${UNIX_L2_CP_SETTINGS_FILE:-}"
+  env_state_dir="${UNIX_L2_CP_STATE_DIR:-}"
+  env_stop_timeout="${UNIX_L2_CP_STOP_TIMEOUT:-}"
+  env_start_wait="${UNIX_L2_CP_START_WAIT:-}"
+  env_verify_wait="${UNIX_L2_CP_START_VERIFY_WAIT:-}"
+  env_ready_lines="${UNIX_L2_CP_READY_LOG_LINES:-}"
+  env_lang="${UNIX_L2_CP_LANG:-}"
+
   if [ -f "$UNIX_L2_CP_SETTINGS_FILE" ]; then
     # shellcheck disable=SC1090
     . "$UNIX_L2_CP_SETTINGS_FILE"
   fi
 
+  [ -n "$env_server_dir" ] && UNIX_L2_CP_SERVER_DIR="$env_server_dir"
+  [ -n "$env_settings_file" ] && UNIX_L2_CP_SETTINGS_FILE="$env_settings_file"
+  [ -n "$env_state_dir" ] && UNIX_L2_CP_STATE_DIR="$env_state_dir"
+  [ -n "$env_stop_timeout" ] && UNIX_L2_CP_STOP_TIMEOUT="$env_stop_timeout"
+  [ -n "$env_start_wait" ] && UNIX_L2_CP_START_WAIT="$env_start_wait"
+  [ -n "$env_verify_wait" ] && UNIX_L2_CP_START_VERIFY_WAIT="$env_verify_wait"
+  [ -n "$env_ready_lines" ] && UNIX_L2_CP_READY_LOG_LINES="$env_ready_lines"
+  [ -n "$env_lang" ] && UNIX_L2_CP_LANG="$env_lang"
+
   UNIX_L2_CP_SERVER_DIR="${UNIX_L2_CP_SERVER_DIR:-$UNIX_L2_CP_CONFIG_DIR/servers.d}"
+  UNIX_L2_CP_STATE_DIR="${UNIX_L2_CP_STATE_DIR:-/var/lib/unix-l2-control-panel}"
   UNIX_L2_CP_LANG="${UNIX_L2_CP_LANG:-ru}"
 }
 

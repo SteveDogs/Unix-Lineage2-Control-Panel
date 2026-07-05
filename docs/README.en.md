@@ -11,11 +11,16 @@ When several Lineage 2 server packs run on one machine, plain `ps ax` becomes ha
 This project gives you a clean menu and simple commands for:
 
 - short status
+- colored status with LIVE and MAINT modes
 - full process list
+- server card with paths, logs, ports, and PIDs
 - start
 - stop
 - restart
+- mass actions for all configured servers
+- maintenance mode
 - log viewing
+- post-start checks: PID, port, log activity, and ready text
 - setup diagnostics
 
 ## Installation
@@ -60,9 +65,12 @@ sudo nano /etc/unix-l2-control-panel/servers.d/myserver.conf
 ```bash
 l2ctl status
 l2ctl full
+l2ctl card myserver
 l2ctl start myserver game
+l2ctl restart all login
+l2ctl maintenance myserver on
+l2ctl maintenance all status
 l2ctl stop myserver login
-l2ctl restart myserver both
 l2ctl logs myserver game 50
 l2ctl follow myserver login 100
 l2doctor
@@ -81,6 +89,7 @@ LOGIN_LOOP="AuthServer_loop.sh"
 LOGIN_MATCH="AuthServer"
 LOGIN_LOG="log/stdout.log"
 LOGIN_PORT_HINT="2106"
+LOGIN_READY_MATCH=""
 
 GAME_ENABLED="true"
 GAME_DIR="/home/games/gameserver"
@@ -88,7 +97,10 @@ GAME_LOOP="GameServer_loop.sh"
 GAME_MATCH="GameServer"
 GAME_LOG="log/stdout.log"
 GAME_PORT_HINT="7777"
+GAME_READY_MATCH=""
 ```
+
+`LOGIN_READY_MATCH` and `GAME_READY_MATCH` can stay empty or contain a log line that means the server is fully started.
 
 ## Languages
 

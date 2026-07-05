@@ -14,6 +14,7 @@ export UNIX_L2_CP_ROOT
 . "$UNIX_L2_CP_ROOT/lib/process.sh"
 
 load_settings
+setup_colors
 
 usage() {
   cat <<'EOF'
@@ -23,9 +24,11 @@ Usage:
   l2ctl status
   l2ctl full
   l2ctl all
-  l2ctl start <server> [login|game|both]
-  l2ctl stop <server> [login|game|both]
-  l2ctl restart <server> [login|game|both]
+  l2ctl card <server>
+  l2ctl start <server|all> [login|game|both]
+  l2ctl stop <server|all> [login|game|both]
+  l2ctl restart <server|all> [login|game|both]
+  l2ctl maintenance <server|all> <on|off|status>
   l2ctl logs <server> <login|game> [lines]
   l2ctl follow <server> <login|game> [lines]
 EOF
@@ -38,7 +41,26 @@ require_configs() {
   }
 }
 
-ensure_server() {
+server_targets() {
+  if [ "$1" = "all" ]; then
+    printf '%s\n' "${UL2CP_SERVER_IDS[@]}"
+  else
+    printf '%s\n' "$1"
+  fi
+}
+
+ensure_server_target() {
+  if [ "$1" = "all" ]; then
+    return 0
+  fi
+
+  server_exists "$1" || {
+    printf 'Unknown server: %s\n' "$1"
+    return 1
+  }
+}
+
+ensure_single_server() {
   server_exists "$1" || {
     printf 'Unknown server: %s\n' "$1"
     return 1
@@ -52,32 +74,110 @@ ensure_role() {
   esac
 }
 
+ensure_maintenance_action() {
+  case "$1" in
+    on|off|status) return 0 ;;
+    *) printf 'Unknown maintenance action: %s\n' "$1"; return 1 ;;
+  esac
+}
+
+format_mode_display() {
+  case "$1" in
+    MAINT) printf '%s%s%s' "$C_YELLOW" "$1" "$C_RESET" ;;
+    *) printf '%s%s%s' "$C_CYAN" "$1" "$C_RESET" ;;
+  esac
+}
+
+format_status_display() {
+  local value
+  local tail
+
+  value="$1"
+  case "$value" in
+    RUN*)
+      tail="${value#RUN}"
+      printf '%sRUN%s%s' "$C_GREEN" "$C_RESET" "$tail"
+      ;;
+    STOPPED*)
+      printf '%s%s%s' "$C_RED" "$value" "$C_RESET"
+      ;;
+    DISABLED*)
+      printf '%s%s%s' "$C_DIM" "$value" "$C_RESET"
+      ;;
+    *)
+      printf '%s' "$value"
+      ;;
+  esac
+}
+
 status_table() {
   local id
-  printf '%-16s %-24s %-24s\n' "SERVER" "LOGIN" "GAME"
+  local mode
+  local login
+  local game
+
+  printf '%-16s %-8s %-28s %-28s\n' "SERVER" "MODE" "LOGIN" "GAME"
   for id in "${UL2CP_SERVER_IDS[@]}"; do
-    printf '%-16s %-24s %-24s\n' \
-      "$(server_label "$id")" \
-      "$(component_status_text "$id" login)" \
-      "$(component_status_text "$id" game)"
+    mode=$(format_mode_display "$(server_mode_text "$id")")
+    login=$(format_status_display "$(component_status_text "$id" login)")
+    game=$(format_status_display "$(component_status_text "$id" game)")
+    printf '%-16s %-8s %-28s %-28s\n' "$(server_label "$id")" "$mode" "$login" "$game"
   done
+}
+
+show_card() {
+  local id
+  local role
+  local state
+  local dir
+  local loop
+  local match
+  local log_path
+  local ready_match
+  local port
+  local pid
+
+  id="$1"
+
+  printf '========================================\n'
+  printf 'Server      : %s\n' "$(server_label "$id")"
+  printf 'ID          : %s\n' "$id"
+  printf 'Owner       : %s\n' "$(server_owner "$id")"
+  printf 'Mode        : %s\n' "$(server_mode_text "$id")"
+  printf '========================================\n'
+
+  for role in login game; do
+    printf '%s\n' ""
+    printf '%s\n' "${role^^}"
+    printf '  status     : %s\n' "$(component_status_text "$id" "$role")"
+    state=$(component_state "$id" "$role")
+    if [ "$state" = "DISABLED" ]; then
+      continue
+    fi
+
+    dir=$(component_dir "$id" "$role")
+    loop=$(component_loop "$id" "$role")
+    match=$(component_match "$id" "$role")
+    log_path=$(component_log_path "$id" "$role")
+    ready_match=$(component_ready_match "$id" "$role")
+    port=$(component_current_port "$id" "$role" 2>/dev/null || component_port_hint "$id" "$role")
+    pid=$(component_first_pid "$id" "$role" 2>/dev/null || printf '%s' '-')
+
+    printf '  pid        : %s\n' "$pid"
+    printf '  port       : %s\n' "${port:--}"
+    printf '  dir        : %s\n' "$dir"
+    printf '  loop       : %s\n' "$loop"
+    printf '  match      : %s\n' "$match"
+    printf '  log        : %s\n' "$log_path"
+    printf '  ready text : %s\n' "${ready_match:--}"
+  done
+  printf '\n'
 }
 
 full_status() {
   local id
-  local role
   for id in "${UL2CP_SERVER_IDS[@]}"; do
-    printf 'Server : %s (%s)\n' "$(server_label "$id")" "$id"
-    printf 'Owner  : %s\n' "$(server_owner "$id")"
-    for role in login game; do
-      printf '%s : %s\n' "$role" "$(component_status_text "$id" "$role")"
-      if component_enabled "$id" "$role"; then
-        printf '  dir  : %s\n' "$(component_dir "$id" "$role")"
-        printf '  loop : %s\n' "$(component_loop "$id" "$role")"
-        printf '  log  : %s\n' "$(component_log_path "$id" "$role")"
-      fi
-    done
-    printf '\n'
+    show_card "$id"
   done
 }
 
@@ -125,26 +225,52 @@ process_rows() {
 
 run_role_group() {
   local action
-  local id
-  local target
+  local target_server
+  local target_role
+  local server_id
   local role
   local rc
 
   action="$1"
-  id="$2"
-  target="$3"
+  target_server="$2"
+  target_role="$3"
   rc=0
 
-  case "$target" in
+  case "$target_role" in
     both) set -- login game ;;
-    *) set -- "$target" ;;
+    *) set -- "$target_role" ;;
   esac
 
-  for role in "$@"; do
+  for server_id in $(server_targets "$target_server"); do
+    for role in "$@"; do
+      case "$action" in
+        start) start_component "$server_id" "$role" || rc=1 ;;
+        stop) stop_component "$server_id" "$role" || rc=1 ;;
+        restart) restart_component "$server_id" "$role" || rc=1 ;;
+      esac
+    done
+  done
+
+  return "$rc"
+}
+
+run_maintenance() {
+  local target_server
+  local action
+  local server_id
+  local rc
+
+  target_server="$1"
+  action="$2"
+  rc=0
+
+  for server_id in $(server_targets "$target_server"); do
     case "$action" in
-      start) start_component "$id" "$role" || rc=1 ;;
-      stop) stop_component "$id" "$role" || rc=1 ;;
-      restart) restart_component "$id" "$role" || rc=1 ;;
+      on) maintenance_on_server "$server_id" || rc=1 ;;
+      off) maintenance_off_server "$server_id" || rc=1 ;;
+      status)
+        printf '%-16s %s\n' "$(server_label "$server_id")" "$(maintenance_status_server "$server_id")"
+        ;;
     esac
   done
 
@@ -163,19 +289,28 @@ case "${1:-}" in
   all)
     process_rows 1
     ;;
+  card)
+    ensure_single_server "${2:-}" || exit 1
+    show_card "$2"
+    ;;
   start|stop|restart)
-    ensure_server "${2:-}" || exit 1
+    ensure_server_target "${2:-}" || exit 1
     ensure_role "${3:-both}" || exit 1
     run_role_group "$1" "$2" "${3:-both}"
     ;;
+  maintenance)
+    ensure_server_target "${2:-}" || exit 1
+    ensure_maintenance_action "${3:-status}" || exit 1
+    run_maintenance "$2" "${3:-status}"
+    ;;
   logs)
-    ensure_server "${2:-}" || exit 1
+    ensure_single_server "${2:-}" || exit 1
     ensure_role "${3:-}" || exit 1
     [ "${3:-}" != "both" ] || { printf 'Use login or game for logs\n'; exit 1; }
     show_component_logs "$2" "$3" "${4:-40}"
     ;;
   follow)
-    ensure_server "${2:-}" || exit 1
+    ensure_single_server "${2:-}" || exit 1
     ensure_role "${3:-}" || exit 1
     [ "${3:-}" != "both" ] || { printf 'Use login or game for logs\n'; exit 1; }
     follow_component_logs "$2" "$3" "${4:-40}"
