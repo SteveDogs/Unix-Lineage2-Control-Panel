@@ -30,8 +30,8 @@ if [ ! -f "$CONFIG_DIR/settings.conf" ]; then
   cp "$SRC_DIR/config/settings.conf.example" "$CONFIG_DIR/settings.conf"
 fi
 
-if [ ! -f "$SERVER_DIR/example.conf" ]; then
-  cp "$SRC_DIR/config/servers.d/example.conf" "$SERVER_DIR/example.conf"
+if [ ! -f "$SERVER_DIR/example.conf.example" ]; then
+  cp "$SRC_DIR/config/servers.d/example.conf" "$SERVER_DIR/example.conf.example"
 fi
 
 chmod +x "$INSTALL_DIR"/bin/*

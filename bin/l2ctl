@@ -164,8 +164,13 @@ show_card() {
     match=$(component_match "$id" "$role")
     log_path=$(component_log_path "$id" "$role")
     ready_match=$(component_ready_match "$id" "$role")
-    port=$(component_current_port "$id" "$role" 2>/dev/null || component_port_hint "$id" "$role")
     pid=$(component_first_pid "$id" "$role" 2>/dev/null || printf '%s' '-')
+    if [ "$role" = "aa" ]; then
+      port=$(component_port_hint "$id" "$role")
+      [ -n "$port" ] || port=$(component_current_port "$id" "$role" 2>/dev/null || printf '')
+    else
+      port=$(component_current_port "$id" "$role" 2>/dev/null || component_port_hint "$id" "$role")
+    fi
 
     printf '  pid        : %s\n' "$pid"
     printf '  port       : %s\n' "${port:--}"
