@@ -42,6 +42,7 @@ check_cmd awk
 check_cmd grep
 check_cmd pgrep
 check_cmd readlink
+check_cmd sed
 check_cmd ss
 check_cmd tail
 check_cmd su

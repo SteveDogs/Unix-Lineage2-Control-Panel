@@ -110,20 +110,116 @@ format_status_display() {
   esac
 }
 
+strip_ansi() {
+  printf '%s' "$1" | sed -E 's/\x1B\[[0-9;]*[A-Za-z]//g'
+}
+
+pad_cell() {
+  local value
+  local width
+  local plain
+  local visible_len
+
+  value="$1"
+  width="$2"
+  plain=$(strip_ansi "$value")
+  visible_len=${#plain}
+
+  if [ "$visible_len" -ge "$width" ]; then
+    printf '%s' "$value"
+    return 0
+  fi
+
+  printf '%s' "$value"
+  printf '%*s' $((width - visible_len)) ''
+}
+
+short_label() {
+  local value
+  local width
+
+  value="$1"
+  width="$2"
+
+  if [ "${#value}" -le "$width" ]; then
+    printf '%s\n' "$value"
+    return 0
+  fi
+
+  printf '%s...\n' "${value:0:$((width - 3))}"
+}
+
+compact_component_status() {
+  local id
+  local role
+  local state
+  local pid
+  local port
+  local text
+
+  id="$1"
+  role="$2"
+  state=$(component_state "$id" "$role")
+
+  case "$state" in
+    DISABLED)
+      text="DISABLED"
+      printf '%s%s%s\n' "$C_DIM" "$text" "$C_RESET"
+      return 0
+      ;;
+    STOPPED)
+      text="STOPPED"
+      printf '%s%s%s\n' "$C_RED" "$text" "$C_RESET"
+      return 0
+      ;;
+  esac
+
+  pid=$(component_first_pid "$id" "$role" 2>/dev/null || printf '')
+  if [ "$role" = "aa" ]; then
+    port=$(component_port_hint "$id" "$role")
+    [ -n "$port" ] || port=$(component_current_port "$id" "$role" 2>/dev/null || printf '')
+  else
+    port=$(component_current_port "$id" "$role" 2>/dev/null || component_port_hint "$id" "$role")
+  fi
+
+  if [ -n "$port" ] && [ -n "$pid" ]; then
+    text="$port ($pid)"
+  elif [ -n "$port" ]; then
+    text="$port"
+  elif [ -n "$pid" ]; then
+    text="pid $pid"
+  else
+    text="run"
+  fi
+
+  printf '%s%s%s\n' "$C_GREEN" "$text" "$C_RESET"
+}
+
 status_table() {
   local id
   local mode
   local login
   local game
   local aa
+  local server_name
 
-  printf '%-16s %-8s %-24s %-24s %-20s\n' "SERVER" "MODE" "LOGIN" "GAME" "AA"
+  pad_cell "SERVER" 14; printf '  '
+  pad_cell "MODE" 5; printf '  '
+  pad_cell "LOGIN" 16; printf '  '
+  pad_cell "GAME" 16; printf '  '
+  printf '%s\n' "AA"
   for id in "${UL2CP_SERVER_IDS[@]}"; do
     mode=$(format_mode_display "$(server_mode_text "$id")")
-    login=$(format_status_display "$(component_status_text "$id" login)")
-    game=$(format_status_display "$(component_status_text "$id" game)")
-    aa=$(format_status_display "$(component_status_text "$id" aa)")
-    printf '%-16s %-8s %-24s %-24s %-20s\n' "$(server_label "$id")" "$mode" "$login" "$game" "$aa"
+    login=$(compact_component_status "$id" login)
+    game=$(compact_component_status "$id" game)
+    aa=$(compact_component_status "$id" aa)
+    server_name=$(short_label "$(server_label "$id")" 14)
+
+    pad_cell "$server_name" 14; printf '  '
+    pad_cell "$mode" 5; printf '  '
+    pad_cell "$login" 16; printf '  '
+    pad_cell "$game" 16; printf '  '
+    printf '%s\n' "$aa"
   done
 }
 
