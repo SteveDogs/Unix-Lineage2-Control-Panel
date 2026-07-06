@@ -140,6 +140,32 @@ find_java_pids() {
   done | sort -n
 }
 
+find_aa_pids() {
+  local id
+  local dir
+  local binary
+  local pid
+  local exe
+  local cwd
+
+  id="$1"
+  dir=$(component_dir "$id" aa) || return 1
+  binary=$(component_match "$id" aa) || return 1
+
+  [ -n "$dir" ] || return 0
+  command -v pgrep >/dev/null 2>&1 || return 0
+
+  for pid in $(pgrep -f "$binary" 2>/dev/null); do
+    exe=$(basename "$(readlink -f "/proc/$pid/exe" 2>/dev/null || printf '')")
+    [ "$exe" = "$binary" ] || continue
+
+    cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || printf '')
+    [ "$cwd" = "$dir" ] || continue
+
+    printf '%s\n' "$pid"
+  done | sort -n
+}
+
 find_loop_pids() {
   local id
   local role
@@ -176,10 +202,58 @@ find_loop_pids() {
   done | sort -n
 }
 
+find_aa_loop_pids() {
+  local id
+  local dir
+  local loop
+  local pid
+  local exe
+  local cwd
+  local cmd
+
+  id="$1"
+  dir=$(component_dir "$id" aa) || return 1
+  loop=$(component_run_loop "$id" aa) || return 1
+
+  [ -n "$dir" ] || return 0
+  [ -n "$loop" ] || return 0
+  command -v pgrep >/dev/null 2>&1 || return 0
+
+  for pid in $(pgrep -f "$loop" 2>/dev/null); do
+    exe=$(basename "$(readlink -f "/proc/$pid/exe" 2>/dev/null || printf '')")
+    case "$exe" in
+      bash|sh|dash) ;;
+      *) continue ;;
+    esac
+
+    cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || printf '')
+    [ "$cwd" = "$dir" ] || continue
+
+    cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || printf '')
+    case "$cmd" in
+      *"$loop"*) printf '%s\n' "$pid" ;;
+    esac
+  done | sort -n
+}
+
+find_component_pids() {
+  case "$2" in
+    aa) find_aa_pids "$1" ;;
+    *) find_java_pids "$1" "$2" ;;
+  esac
+}
+
+find_component_loop_pids() {
+  case "$2" in
+    aa) find_aa_loop_pids "$1" ;;
+    *) find_loop_pids "$1" "$2" ;;
+  esac
+}
+
 component_first_pid() {
   local pids
 
-  pids=$(find_java_pids "$1" "$2")
+  pids=$(find_component_pids "$1" "$2")
   [ -n "$pids" ] || return 1
   printf '%s\n' "$pids" | head -n 1
 }
@@ -215,15 +289,21 @@ component_status_text() {
     return 0
   fi
 
-  pids=$(find_java_pids "$id" "$role")
+  pids=$(find_component_pids "$id" "$role")
   if [ -z "$pids" ]; then
     printf '%s\n' "STOPPED"
     return 0
   fi
 
   first_pid=$(printf '%s\n' "$pids" | head -n 1)
-  port=$(component_current_port "$id" "$role" 2>/dev/null || printf '%s' '-')
-  printf '%s\n' "RUN $port (pid $first_pid)"
+  if [ "$role" = "aa" ]; then
+    port=$(component_port_hint "$id" "$role")
+    [ -n "$port" ] || port="-"
+    printf '%s\n' "RUN $port (pid $first_pid)"
+  else
+    port=$(component_current_port "$id" "$role" 2>/dev/null || printf '%s' '-')
+    printf '%s\n' "RUN $port (pid $first_pid)"
+  fi
 }
 
 component_state() {
@@ -239,17 +319,29 @@ run_as_owner() {
   local owner
   local dir
   local loop
+  local role
 
   owner="$1"
   dir="$2"
   loop="$3"
+  role="${4:-}"
 
-  if [ "$owner" = "root" ] || [ "$(id -un)" = "$owner" ]; then
-    (
-      cd "$dir" && nohup "./$loop" >/dev/null 2>&1 < /dev/null &
-    )
+  if [ "$role" = "aa" ]; then
+    if [ "$owner" = "root" ] || [ "$(id -un)" = "$owner" ]; then
+      (
+        cd "$dir" && nohup sh "./$loop" >/dev/null 2>&1 < /dev/null &
+      )
+    else
+      su - "$owner" -s /bin/bash -c "cd '$dir' && nohup sh './$loop' >/dev/null 2>&1 < /dev/null &"
+    fi
   else
-    su - "$owner" -s /bin/bash -c "cd '$dir' && nohup './$loop' >/dev/null 2>&1 < /dev/null &"
+    if [ "$owner" = "root" ] || [ "$(id -un)" = "$owner" ]; then
+      (
+        cd "$dir" && nohup "./$loop" >/dev/null 2>&1 < /dev/null &
+      )
+    else
+      su - "$owner" -s /bin/bash -c "cd '$dir' && nohup './$loop' >/dev/null 2>&1 < /dev/null &"
+    fi
   fi
 }
 
@@ -401,19 +493,26 @@ start_component() {
   loop=$(component_loop "$id" "$role") || return 1
   owner=$(server_owner "$id")
 
-  pids=$(find_java_pids "$id" "$role")
+  pids=$(find_component_pids "$id" "$role")
   if [ -n "$pids" ]; then
     printf '%s/%s already running: %s\n' "$id" "$role" "$(component_status_text "$id" "$role")"
     return 0
   fi
 
-  if [ ! -x "$dir/$loop" ]; then
-    printf 'Cannot start %s/%s: missing executable %s/%s\n' "$id" "$role" "$dir" "$loop"
-    return 1
+  if [ "$role" = "aa" ]; then
+    if [ ! -f "$dir/$loop" ]; then
+      printf 'Cannot start %s/%s: missing start script %s/%s\n' "$id" "$role" "$dir" "$loop"
+      return 1
+    fi
+  else
+    if [ ! -x "$dir/$loop" ]; then
+      printf 'Cannot start %s/%s: missing executable %s/%s\n' "$id" "$role" "$dir" "$loop"
+      return 1
+    fi
   fi
 
   started_at=$(date +%s)
-  run_as_owner "$owner" "$dir" "$loop"
+  run_as_owner "$owner" "$dir" "$loop" "$role"
   sleep "$UNIX_L2_CP_START_WAIT"
 
   if wait_for_component_ready "$id" "$role" "$started_at"; then
@@ -431,17 +530,25 @@ stop_component() {
   local role
   local pids
   local loops
+  local screen_name
   local wait_left
 
   id="$1"
   role="$2"
 
-  pids=$(find_java_pids "$id" "$role")
-  loops=$(find_loop_pids "$id" "$role")
+  pids=$(find_component_pids "$id" "$role")
+  loops=$(find_component_loop_pids "$id" "$role")
 
   if [ -z "$pids" ] && [ -z "$loops" ]; then
     printf '%s/%s already stopped\n' "$id" "$role"
     return 0
+  fi
+
+  if [ "$role" = "aa" ]; then
+    screen_name=$(component_screen_name "$id" aa)
+    if [ -n "$screen_name" ] && command -v screen >/dev/null 2>&1; then
+      screen -S "$screen_name" -X quit >/dev/null 2>&1 || true
+    fi
   fi
 
   if [ -n "$pids" ]; then
@@ -450,19 +557,19 @@ stop_component() {
 
   wait_left="$UNIX_L2_CP_STOP_TIMEOUT"
   while [ "$wait_left" -gt 0 ]; do
-    pids=$(find_java_pids "$id" "$role")
+    pids=$(find_component_pids "$id" "$role")
     [ -z "$pids" ] && break
     sleep 1
     wait_left=$((wait_left - 1))
   done
 
-  pids=$(find_java_pids "$id" "$role")
+  pids=$(find_component_pids "$id" "$role")
   if [ -n "$pids" ]; then
     printf 'Stop timeout for %s/%s. Still running: %s\n' "$id" "$role" "$pids"
     return 1
   fi
 
-  loops=$(find_loop_pids "$id" "$role")
+  loops=$(find_component_loop_pids "$id" "$role")
   if [ -n "$loops" ]; then
     kill -TERM $loops 2>/dev/null || true
     sleep 1
@@ -490,6 +597,9 @@ maintenance_on_server() {
   if component_enabled "$id" game; then
     stop_component "$id" game || rc=1
   fi
+  if component_enabled "$id" aa; then
+    stop_component "$id" aa || rc=1
+  fi
 
   printf 'Maintenance enabled for %s\n' "$id"
   return "$rc"
@@ -504,6 +614,9 @@ maintenance_off_server() {
 
   if component_enabled "$id" login; then
     start_component "$id" login || rc=1
+  fi
+  if [ "$rc" -eq 0 ] && component_enabled "$id" aa; then
+    start_component "$id" aa || rc=1
   fi
   if [ "$rc" -eq 0 ] && component_enabled "$id" game; then
     start_component "$id" game || rc=1

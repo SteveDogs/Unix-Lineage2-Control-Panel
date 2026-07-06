@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- Added Active Anticheat support with separate `AA` status, logs, and diagnostics.
+- Added support for `startscreen.sh` and `start.sh` in AA server folders.
+- Added AA fields to config examples and documentation.
+- Improved server card and full process view for AA setups.
+
 ## 1.1.0
 
 - Added `all` actions for `start`, `stop`, and `restart`.

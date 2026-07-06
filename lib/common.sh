@@ -5,7 +5,7 @@ if [ -z "${UNIX_L2_CP_ROOT:-}" ]; then
 fi
 
 UNIX_L2_CP_NAME="Unix Lineage2 Control Panel"
-UNIX_L2_CP_VERSION="1.1.0"
+UNIX_L2_CP_VERSION="1.2.0"
 UNIX_L2_CP_SITE="https://steve.dog"
 UNIX_L2_CP_AUTHOR="Steve Dog"
 UNIX_L2_CP_COPYRIGHT="Copyright (c) 2026 Steve Dog"

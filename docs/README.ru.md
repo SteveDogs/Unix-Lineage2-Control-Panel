@@ -1,6 +1,6 @@
 # Unix Lineage2 Control Panel
 
-Простая консольная панель для управления `login` и `game` процессами Lineage 2 на Unix/Linux.
+Простая консольная панель для управления `login`, `game` и `AA` процессами Lineage 2 на Unix/Linux.
 
 Автор: Steve Dog  
 Сайт: [steve.dog](https://steve.dog)
@@ -17,6 +17,7 @@
 - запуск
 - остановка
 - перезапуск
+- поддержка Active Anticheat через отдельную папку и `startscreen.sh`
 - массовые действия по всем серверам
 - режим обслуживания
 - просмотр логов
@@ -66,11 +67,14 @@ sudo nano /etc/unix-l2-control-panel/servers.d/myserver.conf
 l2ctl status
 l2ctl full
 l2ctl card myserver
+l2ctl start myserver aa
+l2ctl start myserver full
 l2ctl start myserver game
 l2ctl restart all login
 l2ctl maintenance myserver on
 l2ctl maintenance all status
 l2ctl stop myserver login
+l2ctl logs myserver aa 50
 l2ctl logs myserver game 50
 l2ctl follow myserver login 100
 l2doctor
@@ -93,6 +97,16 @@ LOGIN_LOG="log/stdout.log"
 LOGIN_PORT_HINT="2106"
 LOGIN_READY_MATCH=""
 
+AA_ENABLED="false"
+AA_DIR="/home/games/anticheat"
+AA_START="startscreen.sh"
+AA_LOOP="start.sh"
+AA_BINARY="server"
+AA_LOG="log.txt"
+AA_PORT_HINT="11000"
+AA_READY_MATCH="Listening to players on address"
+AA_SCREEN_NAME="myserver-aa"
+
 GAME_ENABLED="true"
 GAME_DIR="/home/games/gameserver"
 GAME_LOOP="GameServer_loop.sh"
@@ -102,7 +116,15 @@ GAME_PORT_HINT="7777"
 GAME_READY_MATCH=""
 ```
 
-`LOGIN_READY_MATCH` и `GAME_READY_MATCH` можно оставить пустыми или указать текст из лога, по которому панель поймет, что сервер действительно поднялся.
+`LOGIN_READY_MATCH`, `AA_READY_MATCH` и `GAME_READY_MATCH` можно оставить пустыми или указать текст из лога, по которому панель поймет, что сервер действительно поднялся.
+
+## Active Anticheat
+
+Если у вас защита стоит в отдельной папке `Server`, укажите `AA_*` поля в конфиге сервера.
+
+- `AA_DIR` должен вести в папку античита, а не в папку геймсервера.
+- Панель запускает AA через `sh startscreen.sh`, потому что это стандартный вариант из [официальной Linux-инструкции Active Anticheat](https://active-ac.com/manual/ru/lineage2/install_linux/).
+- Если у вас включен Active Anticheat, не убирайте `LD_PRELOAD=$PWD/active_pr64.so` из скрипта запуска геймсервера.
 
 ## Языки
 

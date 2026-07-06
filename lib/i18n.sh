@@ -33,6 +33,8 @@ tr_text() {
     ru:login) echo "login" ;;
     ru:game) echo "game" ;;
     ru:both) echo "both" ;;
+    ru:aa) echo "aa" ;;
+    ru:full) echo "full" ;;
     ru:maintenance_on) echo "Включить maintenance" ;;
     ru:maintenance_off) echo "Выключить maintenance" ;;
     ru:maintenance_status) echo "Показать maintenance status" ;;
@@ -77,6 +79,8 @@ tr_text() {
     en:login) echo "login" ;;
     en:game) echo "game" ;;
     en:both) echo "both" ;;
+    en:aa) echo "aa" ;;
+    en:full) echo "full" ;;
     en:maintenance_on) echo "Enable maintenance" ;;
     en:maintenance_off) echo "Disable maintenance" ;;
     en:maintenance_status) echo "Show maintenance status" ;;
@@ -121,6 +125,8 @@ tr_text() {
     uk:login) echo "login" ;;
     uk:game) echo "game" ;;
     uk:both) echo "both" ;;
+    uk:aa) echo "aa" ;;
+    uk:full) echo "full" ;;
     uk:maintenance_on) echo "Увімкнути maintenance" ;;
     uk:maintenance_off) echo "Вимкнути maintenance" ;;
     uk:maintenance_status) echo "Показати maintenance status" ;;

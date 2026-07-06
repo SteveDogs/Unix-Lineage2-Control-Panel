@@ -113,12 +113,16 @@ choose_role_group() {
     echo "1) $(tr_text login)" >&2
     echo "2) $(tr_text game)" >&2
     echo "3) $(tr_text both)" >&2
+    echo "4) $(tr_text aa)" >&2
+    echo "5) $(tr_text full)" >&2
     echo "0) $(tr_text back)" >&2
     read -r -p "$(tr_text prompt_choose): " answer
     case "$answer" in
       1) printf '%s\n' "login"; return 0 ;;
       2) printf '%s\n' "game"; return 0 ;;
       3) printf '%s\n' "both"; return 0 ;;
+      4) printf '%s\n' "aa"; return 0 ;;
+      5) printf '%s\n' "full"; return 0 ;;
       0|'') return 1 ;;
       *) echo "$(tr_text wrong_choice)" >&2 ;;
     esac
@@ -132,11 +136,13 @@ choose_single_role() {
     echo "$(tr_text choose_component):" >&2
     echo "1) $(tr_text login)" >&2
     echo "2) $(tr_text game)" >&2
+    echo "3) $(tr_text aa)" >&2
     echo "0) $(tr_text back)" >&2
     read -r -p "$(tr_text prompt_choose): " answer
     case "$answer" in
       1) printf '%s\n' "login"; return 0 ;;
       2) printf '%s\n' "game"; return 0 ;;
+      3) printf '%s\n' "aa"; return 0 ;;
       0|'') return 1 ;;
       *) echo "$(tr_text wrong_choice)" >&2 ;;
     esac

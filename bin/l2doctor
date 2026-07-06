@@ -68,6 +68,18 @@ for id in "${UL2CP_SERVER_IDS[@]}"; do
     printf 'login status: DISABLED\n'
   fi
 
+  if component_enabled "$id" aa; then
+    check_path "aa dir" "$(component_dir "$id" aa)"
+    check_path "aa start" "$(component_dir "$id" aa)/$(component_loop "$id" aa)"
+    check_path "aa loop" "$(component_dir "$id" aa)/$(component_run_loop "$id" aa)"
+    check_path "aa log" "$(component_log_path "$id" aa)"
+    printf 'aa screen   : %s\n' "$(component_screen_name "$id" aa | awk 'NF {print; found=1} END {if (!found) print "-"}')"
+    printf 'aa ready    : %s\n' "$(component_ready_match "$id" aa | awk 'NF {print; found=1} END {if (!found) print "-"}')"
+    printf 'aa status   : %s\n' "$(component_status_text "$id" aa)"
+  else
+    printf 'aa status   : DISABLED\n'
+  fi
+
   if component_enabled "$id" game; then
     check_path "game dir" "$(component_dir "$id" game)"
     check_path "game loop" "$(component_dir "$id" game)/$(component_loop "$id" game)"
