@@ -2,12 +2,12 @@
 set -u
 
 SOURCE_FILE=$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$SOURCE_FILE")" && pwd)
-UNIX_L2_CP_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$SOURCE_FILE")" && pwd)
+UNIX_L2_CP_ROOT=$(CDPATH='' cd -- "$SCRIPT_DIR/.." && pwd)
 export UNIX_L2_CP_ROOT
 
 case "${1:-}" in
-  --full) exec "$UNIX_L2_CP_ROOT/bin/l2ctl" all ;;
-  --all) exec "$UNIX_L2_CP_ROOT/bin/l2ctl" all ;;
-  *) exec "$UNIX_L2_CP_ROOT/bin/l2ctl" status ;;
+--full) exec "$UNIX_L2_CP_ROOT/bin/l2ctl" all ;;
+--all) exec "$UNIX_L2_CP_ROOT/bin/l2ctl" all ;;
+*) exec "$UNIX_L2_CP_ROOT/bin/l2ctl" status ;;
 esac

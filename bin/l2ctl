@@ -2,8 +2,8 @@
 set -u
 
 SOURCE_FILE=$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$SOURCE_FILE")" && pwd)
-UNIX_L2_CP_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$SOURCE_FILE")" && pwd)
+UNIX_L2_CP_ROOT=$(CDPATH='' cd -- "$SCRIPT_DIR/.." && pwd)
 export UNIX_L2_CP_ROOT
 
 # shellcheck disable=SC1091
@@ -17,7 +17,7 @@ load_settings
 setup_colors
 
 usage() {
-  cat <<'EOF'
+	cat <<'EOF'
 Unix Lineage2 Control Panel
 
 Usage:
@@ -35,402 +35,424 @@ EOF
 }
 
 require_configs() {
-  load_server_configs >/dev/null 2>&1 || {
-    printf 'No server configs found in %s\n' "$UNIX_L2_CP_SERVER_DIR"
-    return 1
-  }
+	load_server_configs >/dev/null 2>&1 || {
+		printf 'No server configs found in %s\n' "$UNIX_L2_CP_SERVER_DIR"
+		return 1
+	}
 }
 
 server_targets() {
-  if [ "$1" = "all" ]; then
-    printf '%s\n' "${UL2CP_SERVER_IDS[@]}"
-  else
-    printf '%s\n' "$1"
-  fi
+	if [ "$1" = "all" ]; then
+		printf '%s\n' "${UL2CP_SERVER_IDS[@]}"
+	else
+		printf '%s\n' "$1"
+	fi
 }
 
 ensure_server_target() {
-  if [ "$1" = "all" ]; then
-    return 0
-  fi
+	if [ "$1" = "all" ]; then
+		return 0
+	fi
 
-  server_exists "$1" || {
-    printf 'Unknown server: %s\n' "$1"
-    return 1
-  }
+	server_exists "$1" || {
+		printf 'Unknown server: %s\n' "$1"
+		return 1
+	}
 }
 
 ensure_single_server() {
-  server_exists "$1" || {
-    printf 'Unknown server: %s\n' "$1"
-    return 1
-  }
+	server_exists "$1" || {
+		printf 'Unknown server: %s\n' "$1"
+		return 1
+	}
 }
 
 ensure_role() {
-  case "$1" in
-    login|game|both|aa|full) return 0 ;;
-    *) printf 'Unknown role: %s\n' "$1"; return 1 ;;
-  esac
+	case "$1" in
+	login | game | both | aa | full) return 0 ;;
+	*)
+		printf 'Unknown role: %s\n' "$1"
+		return 1
+		;;
+	esac
 }
 
 ensure_maintenance_action() {
-  case "$1" in
-    on|off|status) return 0 ;;
-    *) printf 'Unknown maintenance action: %s\n' "$1"; return 1 ;;
-  esac
+	case "$1" in
+	on | off | status) return 0 ;;
+	*)
+		printf 'Unknown maintenance action: %s\n' "$1"
+		return 1
+		;;
+	esac
 }
 
 format_mode_display() {
-  case "$1" in
-    MAINT) printf '%s%s%s' "$C_YELLOW" "$1" "$C_RESET" ;;
-    *) printf '%s%s%s' "$C_CYAN" "$1" "$C_RESET" ;;
-  esac
+	case "$1" in
+	MAINT) printf '%s%s%s' "$C_YELLOW" "$1" "$C_RESET" ;;
+	*) printf '%s%s%s' "$C_CYAN" "$1" "$C_RESET" ;;
+	esac
 }
 
 format_status_display() {
-  local value
-  local tail
+	local value
+	local tail
 
-  value="$1"
-  case "$value" in
-    RUN*)
-      tail="${value#RUN}"
-      printf '%sRUN%s%s' "$C_GREEN" "$C_RESET" "$tail"
-      ;;
-    STOPPED*)
-      printf '%s%s%s' "$C_RED" "$value" "$C_RESET"
-      ;;
-    DISABLED*)
-      printf '%s%s%s' "$C_DIM" "$value" "$C_RESET"
-      ;;
-    *)
-      printf '%s' "$value"
-      ;;
-  esac
+	value="$1"
+	case "$value" in
+	RUN*)
+		tail="${value#RUN}"
+		printf '%sRUN%s%s' "$C_GREEN" "$C_RESET" "$tail"
+		;;
+	STOPPED*)
+		printf '%s%s%s' "$C_RED" "$value" "$C_RESET"
+		;;
+	DISABLED*)
+		printf '%s%s%s' "$C_DIM" "$value" "$C_RESET"
+		;;
+	*)
+		printf '%s' "$value"
+		;;
+	esac
 }
 
 strip_ansi() {
-  printf '%s' "$1" | sed -E 's/\x1B\[[0-9;]*[A-Za-z]//g'
+	printf '%s' "$1" | sed -E 's/\x1B\[[0-9;]*[A-Za-z]//g'
 }
 
 pad_cell() {
-  local value
-  local width
-  local plain
-  local visible_len
+	local value
+	local width
+	local plain
+	local visible_len
 
-  value="$1"
-  width="$2"
-  plain=$(strip_ansi "$value")
-  visible_len=${#plain}
+	value="$1"
+	width="$2"
+	plain=$(strip_ansi "$value")
+	visible_len=${#plain}
 
-  if [ "$visible_len" -ge "$width" ]; then
-    printf '%s' "$value"
-    return 0
-  fi
+	if [ "$visible_len" -ge "$width" ]; then
+		printf '%s' "$value"
+		return 0
+	fi
 
-  printf '%s' "$value"
-  printf '%*s' $((width - visible_len)) ''
+	printf '%s' "$value"
+	printf '%*s' $((width - visible_len)) ''
 }
 
 short_label() {
-  local value
-  local width
+	local value
+	local width
 
-  value="$1"
-  width="$2"
+	value="$1"
+	width="$2"
 
-  if [ "${#value}" -le "$width" ]; then
-    printf '%s\n' "$value"
-    return 0
-  fi
+	if [ "${#value}" -le "$width" ]; then
+		printf '%s\n' "$value"
+		return 0
+	fi
 
-  printf '%s...\n' "${value:0:$((width - 3))}"
+	printf '%s...\n' "${value:0:$((width - 3))}"
 }
 
 compact_component_status() {
-  local id
-  local role
-  local state
-  local pid
-  local port
-  local text
+	local id
+	local role
+	local state
+	local pid
+	local port
+	local text
 
-  id="$1"
-  role="$2"
-  state=$(component_state "$id" "$role")
+	id="$1"
+	role="$2"
+	state=$(component_state "$id" "$role")
 
-  case "$state" in
-    DISABLED)
-      text="DISABLED"
-      printf '%s%s%s\n' "$C_DIM" "$text" "$C_RESET"
-      return 0
-      ;;
-    STOPPED)
-      text="STOPPED"
-      printf '%s%s%s\n' "$C_RED" "$text" "$C_RESET"
-      return 0
-      ;;
-  esac
+	case "$state" in
+	DISABLED)
+		text="DISABLED"
+		printf '%s%s%s\n' "$C_DIM" "$text" "$C_RESET"
+		return 0
+		;;
+	STOPPED)
+		text="STOPPED"
+		printf '%s%s%s\n' "$C_RED" "$text" "$C_RESET"
+		return 0
+		;;
+	esac
 
-  pid=$(component_first_pid "$id" "$role" 2>/dev/null || printf '')
-  if [ "$role" = "aa" ]; then
-    port=$(component_port_hint "$id" "$role")
-    [ -n "$port" ] || port=$(component_current_port "$id" "$role" 2>/dev/null || printf '')
-  else
-    port=$(component_current_port "$id" "$role" 2>/dev/null || component_port_hint "$id" "$role")
-  fi
+	pid=$(component_first_pid "$id" "$role" 2>/dev/null || printf '')
+	if [ "$role" = "aa" ]; then
+		port=$(component_port_hint "$id" "$role")
+		[ -n "$port" ] || port=$(component_current_port "$id" "$role" 2>/dev/null || printf '')
+	else
+		port=$(component_current_port "$id" "$role" 2>/dev/null || component_port_hint "$id" "$role")
+	fi
 
-  if [ -n "$port" ] && [ -n "$pid" ]; then
-    text="$port ($pid)"
-  elif [ -n "$port" ]; then
-    text="$port"
-  elif [ -n "$pid" ]; then
-    text="pid $pid"
-  else
-    text="run"
-  fi
+	if [ -n "$port" ] && [ -n "$pid" ]; then
+		text="$port ($pid)"
+	elif [ -n "$port" ]; then
+		text="$port"
+	elif [ -n "$pid" ]; then
+		text="pid $pid"
+	else
+		text="run"
+	fi
 
-  printf '%s%s%s\n' "$C_GREEN" "$text" "$C_RESET"
+	printf '%s%s%s\n' "$C_GREEN" "$text" "$C_RESET"
 }
 
 status_table() {
-  local id
-  local mode
-  local login
-  local game
-  local aa
-  local server_name
+	local id
+	local mode
+	local login
+	local game
+	local aa
+	local server_name
 
-  pad_cell "SERVER" 14; printf '  '
-  pad_cell "MODE" 5; printf '  '
-  pad_cell "LOGIN" 16; printf '  '
-  pad_cell "GAME" 16; printf '  '
-  printf '%s\n' "AA"
-  for id in "${UL2CP_SERVER_IDS[@]}"; do
-    mode=$(format_mode_display "$(server_mode_text "$id")")
-    login=$(compact_component_status "$id" login)
-    game=$(compact_component_status "$id" game)
-    aa=$(compact_component_status "$id" aa)
-    server_name=$(short_label "$(server_label "$id")" 14)
+	pad_cell "SERVER" 14
+	printf '  '
+	pad_cell "MODE" 5
+	printf '  '
+	pad_cell "LOGIN" 16
+	printf '  '
+	pad_cell "GAME" 16
+	printf '  '
+	printf '%s\n' "AA"
+	for id in "${UL2CP_SERVER_IDS[@]}"; do
+		mode=$(format_mode_display "$(server_mode_text "$id")")
+		login=$(compact_component_status "$id" login)
+		game=$(compact_component_status "$id" game)
+		aa=$(compact_component_status "$id" aa)
+		server_name=$(short_label "$(server_label "$id")" 14)
 
-    pad_cell "$server_name" 14; printf '  '
-    pad_cell "$mode" 5; printf '  '
-    pad_cell "$login" 16; printf '  '
-    pad_cell "$game" 16; printf '  '
-    printf '%s\n' "$aa"
-  done
+		pad_cell "$server_name" 14
+		printf '  '
+		pad_cell "$mode" 5
+		printf '  '
+		pad_cell "$login" 16
+		printf '  '
+		pad_cell "$game" 16
+		printf '  '
+		printf '%s\n' "$aa"
+	done
 }
 
 show_card() {
-  local id
-  local role
-  local state
-  local dir
-  local loop
-  local match
-  local log_path
-  local ready_match
-  local port
-  local pid
-  local screen_name
-  local run_loop
+	local id
+	local role
+	local state
+	local dir
+	local loop
+	local match
+	local log_path
+	local ready_match
+	local port
+	local pid
+	local screen_name
+	local run_loop
 
-  id="$1"
+	id="$1"
 
-  printf '========================================\n'
-  printf 'Server      : %s\n' "$(server_label "$id")"
-  printf 'ID          : %s\n' "$id"
-  printf 'Owner       : %s\n' "$(server_owner "$id")"
-  printf 'Mode        : %s\n' "$(server_mode_text "$id")"
-  printf '========================================\n'
+	printf '========================================\n'
+	printf 'Server      : %s\n' "$(server_label "$id")"
+	printf 'ID          : %s\n' "$id"
+	printf 'Owner       : %s\n' "$(server_owner "$id")"
+	printf 'Mode        : %s\n' "$(server_mode_text "$id")"
+	printf '========================================\n'
 
-  for role in login game aa; do
-    printf '%s\n' ""
-    printf '%s\n' "${role^^}"
-    printf '  status     : %s\n' "$(component_status_text "$id" "$role")"
-    state=$(component_state "$id" "$role")
-    if [ "$state" = "DISABLED" ]; then
-      continue
-    fi
+	for role in login game aa; do
+		printf '%s\n' ""
+		printf '%s\n' "${role^^}"
+		printf '  status     : %s\n' "$(component_status_text "$id" "$role")"
+		state=$(component_state "$id" "$role")
+		if [ "$state" = "DISABLED" ]; then
+			continue
+		fi
 
-    dir=$(component_dir "$id" "$role")
-    loop=$(component_loop "$id" "$role")
-    match=$(component_match "$id" "$role")
-    log_path=$(component_log_path "$id" "$role")
-    ready_match=$(component_ready_match "$id" "$role")
-    pid=$(component_first_pid "$id" "$role" 2>/dev/null || printf '%s' '-')
-    if [ "$role" = "aa" ]; then
-      port=$(component_port_hint "$id" "$role")
-      [ -n "$port" ] || port=$(component_current_port "$id" "$role" 2>/dev/null || printf '')
-    else
-      port=$(component_current_port "$id" "$role" 2>/dev/null || component_port_hint "$id" "$role")
-    fi
+		dir=$(component_dir "$id" "$role")
+		loop=$(component_loop "$id" "$role")
+		match=$(component_match "$id" "$role")
+		log_path=$(component_log_path "$id" "$role")
+		ready_match=$(component_ready_match "$id" "$role")
+		pid=$(component_first_pid "$id" "$role" 2>/dev/null || printf '%s' '-')
+		if [ "$role" = "aa" ]; then
+			port=$(component_port_hint "$id" "$role")
+			[ -n "$port" ] || port=$(component_current_port "$id" "$role" 2>/dev/null || printf '')
+		else
+			port=$(component_current_port "$id" "$role" 2>/dev/null || component_port_hint "$id" "$role")
+		fi
 
-    printf '  pid        : %s\n' "$pid"
-    printf '  port       : %s\n' "${port:--}"
-    printf '  dir        : %s\n' "$dir"
-    printf '  match      : %s\n' "$match"
-    printf '  log        : %s\n' "$log_path"
-    printf '  ready text : %s\n' "${ready_match:--}"
-    if [ "$role" = "aa" ]; then
-      run_loop=$(component_run_loop "$id" "$role")
-      printf '  start      : %s\n' "$loop"
-      printf '  run loop   : %s\n' "$run_loop"
-      screen_name=$(component_screen_name "$id" "$role")
-      printf '  screen     : %s\n' "${screen_name:--}"
-    else
-      printf '  loop       : %s\n' "$loop"
-    fi
-  done
-  printf '\n'
+		printf '  pid        : %s\n' "$pid"
+		printf '  port       : %s\n' "${port:--}"
+		printf '  dir        : %s\n' "$dir"
+		printf '  match      : %s\n' "$match"
+		printf '  log        : %s\n' "$log_path"
+		printf '  ready text : %s\n' "${ready_match:--}"
+		if [ "$role" = "aa" ]; then
+			run_loop=$(component_run_loop "$id" "$role")
+			printf '  start      : %s\n' "$loop"
+			printf '  run loop   : %s\n' "$run_loop"
+			screen_name=$(component_screen_name "$id" "$role")
+			printf '  screen     : %s\n' "${screen_name:--}"
+		else
+			printf '  loop       : %s\n' "$loop"
+		fi
+	done
+	printf '\n'
 }
 
 full_status() {
-  local id
-  for id in "${UL2CP_SERVER_IDS[@]}"; do
-    show_card "$id"
-  done
+	local id
+	for id in "${UL2CP_SERVER_IDS[@]}"; do
+		show_card "$id"
+	done
 }
 
 process_rows() {
-  local include_loops
-  local id
-  local role
-  local pid
-  local ppid
-  local user
-  local cwd
-  local cmd
-  local ports
+	local include_loops
+	local id
+	local role
+	local pid
+	local ppid
+	local user
+	local cwd
+	local cmd
+	local ports
 
-  include_loops="$1"
-  printf '%-16s %-12s %-7s %-7s %-10s %-10s %-40s %s\n' "SERVER" "ROLE" "PID" "PPID" "USER" "PORT" "CWD" "CMD"
+	include_loops="$1"
+	printf '%-16s %-12s %-7s %-7s %-10s %-10s %-40s %s\n' "SERVER" "ROLE" "PID" "PPID" "USER" "PORT" "CWD" "CMD"
 
-  for id in "${UL2CP_SERVER_IDS[@]}"; do
-    for role in login game aa; do
-      if component_enabled "$id" "$role"; then
-        for pid in $(find_component_pids "$id" "$role"); do
-          ppid=$(ps -o ppid= -p "$pid" | awk '{print $1}')
-          user=$(ps -o user= -p "$pid" | awk '{print $1}')
-          cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || printf '?')
-          cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || printf '')
-          ports=$(ports_for_pid "$pid")
-          printf '%-16s %-12s %-7s %-7s %-10s %-10s %-40s %s\n' \
-            "$(server_label "$id")" "$role" "$pid" "$ppid" "$user" "${ports:--}" "$cwd" "$cmd"
-        done
+	for id in "${UL2CP_SERVER_IDS[@]}"; do
+		for role in login game aa; do
+			if component_enabled "$id" "$role"; then
+				for pid in $(find_component_pids "$id" "$role"); do
+					ppid=$(ps -o ppid= -p "$pid" | awk '{print $1}')
+					user=$(ps -o user= -p "$pid" | awk '{print $1}')
+					cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || printf '?')
+					cmd=$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null || printf '')
+					ports=$(ports_for_pid "$pid")
+					printf '%-16s %-12s %-7s %-7s %-10s %-10s %-40s %s\n' \
+						"$(server_label "$id")" "$role" "$pid" "$ppid" "$user" "${ports:--}" "$cwd" "$cmd"
+				done
 
-        if [ "$include_loops" = "1" ]; then
-          for pid in $(find_component_loop_pids "$id" "$role"); do
-            ppid=$(ps -o ppid= -p "$pid" | awk '{print $1}')
-            user=$(ps -o user= -p "$pid" | awk '{print $1}')
-            cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || printf '?')
-            cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || printf '')
-            printf '%-16s %-12s %-7s %-7s %-10s %-10s %-40s %s\n' \
-              "$(server_label "$id")" "${role}_loop" "$pid" "$ppid" "$user" "-" "$cwd" "$cmd"
-          done
-        fi
-      fi
-    done
-  done
+				if [ "$include_loops" = "1" ]; then
+					for pid in $(find_component_loop_pids "$id" "$role"); do
+						ppid=$(ps -o ppid= -p "$pid" | awk '{print $1}')
+						user=$(ps -o user= -p "$pid" | awk '{print $1}')
+						cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || printf '?')
+						cmd=$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null || printf '')
+						printf '%-16s %-12s %-7s %-7s %-10s %-10s %-40s %s\n' \
+							"$(server_label "$id")" "${role}_loop" "$pid" "$ppid" "$user" "-" "$cwd" "$cmd"
+					done
+				fi
+			fi
+		done
+	done
 }
 
 run_role_group() {
-  local action
-  local target_server
-  local target_role
-  local server_id
-  local role
-  local rc
+	local action
+	local target_server
+	local target_role
+	local server_id
+	local role
+	local rc
 
-  action="$1"
-  target_server="$2"
-  target_role="$3"
-  rc=0
+	action="$1"
+	target_server="$2"
+	target_role="$3"
+	rc=0
 
-  case "$target_role" in
-    both) set -- login game ;;
-    full) set -- login aa game ;;
-    *) set -- "$target_role" ;;
-  esac
+	case "$target_role" in
+	both) set -- login game ;;
+	full) set -- login aa game ;;
+	*) set -- "$target_role" ;;
+	esac
 
-  for server_id in $(server_targets "$target_server"); do
-    for role in "$@"; do
-      case "$action" in
-        start) start_component "$server_id" "$role" || rc=1 ;;
-        stop) stop_component "$server_id" "$role" || rc=1 ;;
-        restart) restart_component "$server_id" "$role" || rc=1 ;;
-      esac
-    done
-  done
+	for server_id in $(server_targets "$target_server"); do
+		for role in "$@"; do
+			case "$action" in
+			start) start_component "$server_id" "$role" || rc=1 ;;
+			stop) stop_component "$server_id" "$role" || rc=1 ;;
+			restart) restart_component "$server_id" "$role" || rc=1 ;;
+			esac
+		done
+	done
 
-  return "$rc"
+	return "$rc"
 }
 
 run_maintenance() {
-  local target_server
-  local action
-  local server_id
-  local rc
+	local target_server
+	local action
+	local server_id
+	local rc
 
-  target_server="$1"
-  action="$2"
-  rc=0
+	target_server="$1"
+	action="$2"
+	rc=0
 
-  for server_id in $(server_targets "$target_server"); do
-    case "$action" in
-      on) maintenance_on_server "$server_id" || rc=1 ;;
-      off) maintenance_off_server "$server_id" || rc=1 ;;
-      status)
-        printf '%-16s %s\n' "$(server_label "$server_id")" "$(maintenance_status_server "$server_id")"
-        ;;
-    esac
-  done
+	for server_id in $(server_targets "$target_server"); do
+		case "$action" in
+		on) maintenance_on_server "$server_id" || rc=1 ;;
+		off) maintenance_off_server "$server_id" || rc=1 ;;
+		status)
+			printf '%-16s %s\n' "$(server_label "$server_id")" "$(maintenance_status_server "$server_id")"
+			;;
+		esac
+	done
 
-  return "$rc"
+	return "$rc"
 }
 
 require_configs || exit 1
 
 case "${1:-}" in
-  status)
-    status_table
-    ;;
-  full)
-    full_status
-    ;;
-  all)
-    process_rows 1
-    ;;
-  card)
-    ensure_single_server "${2:-}" || exit 1
-    show_card "$2"
-    ;;
-  start|stop|restart)
-    ensure_server_target "${2:-}" || exit 1
-    ensure_role "${3:-both}" || exit 1
-    run_role_group "$1" "$2" "${3:-both}"
-    ;;
-  maintenance)
-    ensure_server_target "${2:-}" || exit 1
-    ensure_maintenance_action "${3:-status}" || exit 1
-    run_maintenance "$2" "${3:-status}"
-    ;;
-  logs)
-    ensure_single_server "${2:-}" || exit 1
-    ensure_role "${3:-}" || exit 1
-    case "${3:-}" in login|game|aa) ;; *) printf 'Use login, game, or aa for logs\n'; exit 1 ;; esac
-    show_component_logs "$2" "$3" "${4:-40}"
-    ;;
-  follow)
-    ensure_single_server "${2:-}" || exit 1
-    ensure_role "${3:-}" || exit 1
-    case "${3:-}" in login|game|aa) ;; *) printf 'Use login, game, or aa for logs\n'; exit 1 ;; esac
-    follow_component_logs "$2" "$3" "${4:-40}"
-    ;;
-  *)
-    usage
-    exit 1
-    ;;
+status)
+	status_table
+	;;
+full)
+	full_status
+	;;
+all)
+	process_rows 1
+	;;
+card)
+	ensure_single_server "${2:-}" || exit 1
+	show_card "$2"
+	;;
+start | stop | restart)
+	ensure_server_target "${2:-}" || exit 1
+	ensure_role "${3:-both}" || exit 1
+	run_role_group "$1" "$2" "${3:-both}"
+	;;
+maintenance)
+	ensure_server_target "${2:-}" || exit 1
+	ensure_maintenance_action "${3:-status}" || exit 1
+	run_maintenance "$2" "${3:-status}"
+	;;
+logs)
+	ensure_single_server "${2:-}" || exit 1
+	ensure_role "${3:-}" || exit 1
+	case "${3:-}" in login | game | aa) ;; *)
+		printf 'Use login, game, or aa for logs\n'
+		exit 1
+		;;
+	esac
+	show_component_logs "$2" "$3" "${4:-40}"
+	;;
+follow)
+	ensure_single_server "${2:-}" || exit 1
+	ensure_role "${3:-}" || exit 1
+	case "${3:-}" in login | game | aa) ;; *)
+		printf 'Use login, game, or aa for logs\n'
+		exit 1
+		;;
+	esac
+	follow_component_logs "$2" "$3" "${4:-40}"
+	;;
+*)
+	usage
+	exit 1
+	;;
 esac

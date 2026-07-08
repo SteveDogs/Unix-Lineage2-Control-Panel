@@ -2,8 +2,8 @@
 set -u
 
 SOURCE_FILE=$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$SOURCE_FILE")" && pwd)
-UNIX_L2_CP_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$SOURCE_FILE")" && pwd)
+UNIX_L2_CP_ROOT=$(CDPATH='' cd -- "$SCRIPT_DIR/.." && pwd)
 export UNIX_L2_CP_ROOT
 
 # shellcheck disable=SC1091
@@ -17,19 +17,19 @@ load_settings
 load_server_configs >/dev/null 2>&1 || true
 
 check_cmd() {
-  if command -v "$1" >/dev/null 2>&1; then
-    printf '[OK]    command: %s\n' "$1"
-  else
-    printf '[WARN]  command: %s is missing\n' "$1"
-  fi
+	if command -v "$1" >/dev/null 2>&1; then
+		printf '[OK]    command: %s\n' "$1"
+	else
+		printf '[WARN]  command: %s is missing\n' "$1"
+	fi
 }
 
 check_path() {
-  if [ -e "$2" ]; then
-    printf '[OK]    %s: %s\n' "$1" "$2"
-  else
-    printf '[WARN]  %s: missing %s\n' "$1" "$2"
-  fi
+	if [ -e "$2" ]; then
+		printf '[OK]    %s: %s\n' "$1" "$2"
+	else
+		printf '[WARN]  %s: missing %s\n' "$1" "$2"
+	fi
 }
 
 printf 'Project : %s\n' "$UNIX_L2_CP_NAME"
@@ -50,46 +50,46 @@ check_cmd stat
 printf '\n'
 
 if [ "${#UL2CP_SERVER_IDS[@]}" -eq 0 ]; then
-  printf '[WARN]  no server configs found in %s\n' "$UNIX_L2_CP_SERVER_DIR"
-  exit 0
+	printf '[WARN]  no server configs found in %s\n' "$UNIX_L2_CP_SERVER_DIR"
+	exit 0
 fi
 
 for id in "${UL2CP_SERVER_IDS[@]}"; do
-  printf 'Server  : %s (%s)\n' "$(server_label "$id")" "$id"
-  printf 'Owner   : %s\n' "$(server_owner "$id")"
-  printf 'Mode    : %s\n' "$(server_mode_text "$id")"
+	printf 'Server  : %s (%s)\n' "$(server_label "$id")" "$id"
+	printf 'Owner   : %s\n' "$(server_owner "$id")"
+	printf 'Mode    : %s\n' "$(server_mode_text "$id")"
 
-  if component_enabled "$id" login; then
-    check_path "login dir" "$(component_dir "$id" login)"
-    check_path "login loop" "$(component_dir "$id" login)/$(component_loop "$id" login)"
-    check_path "login log" "$(component_log_path "$id" login)"
-    printf 'login ready : %s\n' "$(component_ready_match "$id" login | awk 'NF {print; found=1} END {if (!found) print "-"}')"
-    printf 'login status: %s\n' "$(component_status_text "$id" login)"
-  else
-    printf 'login status: DISABLED\n'
-  fi
+	if component_enabled "$id" login; then
+		check_path "login dir" "$(component_dir "$id" login)"
+		check_path "login loop" "$(component_dir "$id" login)/$(component_loop "$id" login)"
+		check_path "login log" "$(component_log_path "$id" login)"
+		printf 'login ready : %s\n' "$(component_ready_match "$id" login | awk 'NF {print; found=1} END {if (!found) print "-"}')"
+		printf 'login status: %s\n' "$(component_status_text "$id" login)"
+	else
+		printf 'login status: DISABLED\n'
+	fi
 
-  if component_enabled "$id" aa; then
-    check_path "aa dir" "$(component_dir "$id" aa)"
-    check_path "aa start" "$(component_dir "$id" aa)/$(component_loop "$id" aa)"
-    check_path "aa loop" "$(component_dir "$id" aa)/$(component_run_loop "$id" aa)"
-    check_path "aa log" "$(component_log_path "$id" aa)"
-    printf 'aa screen   : %s\n' "$(component_screen_name "$id" aa | awk 'NF {print; found=1} END {if (!found) print "-"}')"
-    printf 'aa ready    : %s\n' "$(component_ready_match "$id" aa | awk 'NF {print; found=1} END {if (!found) print "-"}')"
-    printf 'aa status   : %s\n' "$(component_status_text "$id" aa)"
-  else
-    printf 'aa status   : DISABLED\n'
-  fi
+	if component_enabled "$id" aa; then
+		check_path "aa dir" "$(component_dir "$id" aa)"
+		check_path "aa start" "$(component_dir "$id" aa)/$(component_loop "$id" aa)"
+		check_path "aa loop" "$(component_dir "$id" aa)/$(component_run_loop "$id" aa)"
+		check_path "aa log" "$(component_log_path "$id" aa)"
+		printf 'aa screen   : %s\n' "$(component_screen_name "$id" aa | awk 'NF {print; found=1} END {if (!found) print "-"}')"
+		printf 'aa ready    : %s\n' "$(component_ready_match "$id" aa | awk 'NF {print; found=1} END {if (!found) print "-"}')"
+		printf 'aa status   : %s\n' "$(component_status_text "$id" aa)"
+	else
+		printf 'aa status   : DISABLED\n'
+	fi
 
-  if component_enabled "$id" game; then
-    check_path "game dir" "$(component_dir "$id" game)"
-    check_path "game loop" "$(component_dir "$id" game)/$(component_loop "$id" game)"
-    check_path "game log" "$(component_log_path "$id" game)"
-    printf 'game ready  : %s\n' "$(component_ready_match "$id" game | awk 'NF {print; found=1} END {if (!found) print "-"}')"
-    printf 'game status : %s\n' "$(component_status_text "$id" game)"
-  else
-    printf 'game status : DISABLED\n'
-  fi
+	if component_enabled "$id" game; then
+		check_path "game dir" "$(component_dir "$id" game)"
+		check_path "game loop" "$(component_dir "$id" game)/$(component_loop "$id" game)"
+		check_path "game log" "$(component_log_path "$id" game)"
+		printf 'game ready  : %s\n' "$(component_ready_match "$id" game | awk 'NF {print; found=1} END {if (!found) print "-"}')"
+		printf 'game status : %s\n' "$(component_status_text "$id" game)"
+	else
+		printf 'game status : DISABLED\n'
+	fi
 
-  printf '\n'
+	printf '\n'
 done

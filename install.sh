@@ -9,11 +9,11 @@ SERVER_DIR="$CONFIG_DIR/servers.d"
 STATE_DIR="${STATE_DIR:-/var/lib/unix-l2-control-panel}"
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo "Please run install.sh with sudo or as root."
-  exit 1
+	echo "Please run install.sh with sudo or as root."
+	exit 1
 fi
 
-SRC_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+SRC_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 
 mkdir -p "$INSTALL_DIR" "$BIN_DIR" "$CONFIG_DIR" "$SERVER_DIR" "$STATE_DIR/maintenance"
 
@@ -27,11 +27,11 @@ cp -a "$SRC_DIR/docs" "$INSTALL_DIR/"
 cp -a "$SRC_DIR/config" "$INSTALL_DIR/"
 
 if [ ! -f "$CONFIG_DIR/settings.conf" ]; then
-  cp "$SRC_DIR/config/settings.conf.example" "$CONFIG_DIR/settings.conf"
+	cp "$SRC_DIR/config/settings.conf.example" "$CONFIG_DIR/settings.conf"
 fi
 
 if [ ! -f "$SERVER_DIR/example.conf.example" ]; then
-  cp "$SRC_DIR/config/servers.d/example.conf" "$SERVER_DIR/example.conf.example"
+	cp "$SRC_DIR/config/servers.d/example.conf" "$SERVER_DIR/example.conf.example"
 fi
 
 chmod +x "$INSTALL_DIR"/bin/*

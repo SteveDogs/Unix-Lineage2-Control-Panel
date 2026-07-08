@@ -2,8 +2,8 @@
 set -u
 
 SOURCE_FILE=$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$SOURCE_FILE")" && pwd)
-UNIX_L2_CP_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$SOURCE_FILE")" && pwd)
+UNIX_L2_CP_ROOT=$(CDPATH='' cd -- "$SCRIPT_DIR/.." && pwd)
 export UNIX_L2_CP_ROOT
 
 # shellcheck disable=SC1091
@@ -17,327 +17,375 @@ load_settings
 load_server_configs >/dev/null 2>&1 || true
 
 pause_screen() {
-  echo
-  read -r -p "$(tr_text prompt_enter) " _
+	echo
+	read -r -p "$(tr_text prompt_enter) " _
 }
 
 draw_header() {
-  setup_colors
-  clear 2>/dev/null || true
-  printf '%s\n' "${C_CYAN}========================================${C_RESET}"
-  printf '%s\n' "${C_BOLD}${UNIX_L2_CP_NAME}${C_RESET}"
-  printf '%s\n' "${C_DIM}${UNIX_L2_CP_AUTHOR} | ${UNIX_L2_CP_SITE}${C_RESET}"
-  printf '%s\n' "${C_DIM}Version ${UNIX_L2_CP_VERSION} | Host: $(hostname) | $(date '+%Y-%m-%d %H:%M:%S')${C_RESET}"
-  printf '%s\n' "${C_CYAN}========================================${C_RESET}"
-  echo
+	setup_colors
+	clear 2>/dev/null || true
+	printf '%s\n' "${C_CYAN}========================================${C_RESET}"
+	printf '%s\n' "${C_BOLD}${UNIX_L2_CP_NAME}${C_RESET}"
+	printf '%s\n' "${C_DIM}${UNIX_L2_CP_AUTHOR} | ${UNIX_L2_CP_SITE}${C_RESET}"
+	printf '%s\n' "${C_DIM}Version ${UNIX_L2_CP_VERSION} | Host: $(hostname) | $(date '+%Y-%m-%d %H:%M:%S')${C_RESET}"
+	printf '%s\n' "${C_CYAN}========================================${C_RESET}"
+	echo
 }
 
 action_label() {
-  case "$1" in
-    start) tr_text action_start ;;
-    stop) tr_text action_stop ;;
-    restart) tr_text action_restart ;;
-    logs) tr_text action_logs ;;
-    follow) tr_text action_follow ;;
-    maintenance) tr_text action_maintenance ;;
-    *) printf '%s\n' "$1" ;;
-  esac
+	case "$1" in
+	start) tr_text action_start ;;
+	stop) tr_text action_stop ;;
+	restart) tr_text action_restart ;;
+	logs) tr_text action_logs ;;
+	follow) tr_text action_follow ;;
+	maintenance) tr_text action_maintenance ;;
+	*) printf '%s\n' "$1" ;;
+	esac
 }
 
 confirm_action() {
-  local answer
-  while true; do
-    echo "1) $(tr_text yes)"
-    echo "2) $(tr_text no)"
-    read -r -p "$(tr_text prompt_confirm): " answer
-    case "$answer" in
-      1|y|Y|yes|YES|д|Д|да|ДА|т|Т|так|ТАК) return 0 ;;
-      2|n|N|no|NO|'') return 1 ;;
-      *) echo "$(tr_text wrong_choice)" ;;
-    esac
-  done
+	local answer
+	while true; do
+		echo "1) $(tr_text yes)"
+		echo "2) $(tr_text no)"
+		read -r -p "$(tr_text prompt_confirm): " answer
+		case "$answer" in
+		1 | y | Y | yes | YES | д | Д | да | ДА | т | Т | так | ТАК) return 0 ;;
+		2 | n | N | no | NO | '') return 1 ;;
+		*) tr_text wrong_choice ;;
+		esac
+	done
 }
 
 choose_server() {
-  local allow_all
-  local answer
-  local idx
-  local id
+	local allow_all
+	local answer
+	local idx
+	local id
 
-  allow_all="${1:-0}"
+	allow_all="${1:-0}"
 
-  while true; do
-    echo >&2
-    echo "$(tr_text choose_server):" >&2
-    idx=1
-    if [ "$allow_all" = "1" ]; then
-      printf '%s) %s\n' "$idx" "$(tr_text all_servers)" >&2
-      idx=$((idx + 1))
-    fi
-    for id in "${UL2CP_SERVER_IDS[@]}"; do
-      printf '%s) %s\n' "$idx" "$(server_label "$id")" >&2
-      idx=$((idx + 1))
-    done
-    printf '0) %s\n' "$(tr_text back)" >&2
-    read -r -p "$(tr_text prompt_choose): " answer
+	while true; do
+		echo >&2
+		echo "$(tr_text choose_server):" >&2
+		idx=1
+		if [ "$allow_all" = "1" ]; then
+			printf '%s) %s\n' "$idx" "$(tr_text all_servers)" >&2
+			idx=$((idx + 1))
+		fi
+		for id in "${UL2CP_SERVER_IDS[@]}"; do
+			printf '%s) %s\n' "$idx" "$(server_label "$id")" >&2
+			idx=$((idx + 1))
+		done
+		printf '0) %s\n' "$(tr_text back)" >&2
+		read -r -p "$(tr_text prompt_choose): " answer
 
-    case "$answer" in
-      0|'') return 1 ;;
-    esac
+		case "$answer" in
+		0 | '') return 1 ;;
+		esac
 
-    idx=1
-    if [ "$allow_all" = "1" ]; then
-      if [ "$answer" = "$idx" ]; then
-        printf '%s\n' "all"
-        return 0
-      fi
-      idx=$((idx + 1))
-    fi
+		idx=1
+		if [ "$allow_all" = "1" ]; then
+			if [ "$answer" = "$idx" ]; then
+				printf '%s\n' "all"
+				return 0
+			fi
+			idx=$((idx + 1))
+		fi
 
-    for id in "${UL2CP_SERVER_IDS[@]}"; do
-      if [ "$answer" = "$idx" ]; then
-        printf '%s\n' "$id"
-        return 0
-      fi
-      idx=$((idx + 1))
-    done
-    echo "$(tr_text wrong_choice)" >&2
-  done
+		for id in "${UL2CP_SERVER_IDS[@]}"; do
+			if [ "$answer" = "$idx" ]; then
+				printf '%s\n' "$id"
+				return 0
+			fi
+			idx=$((idx + 1))
+		done
+		tr_text wrong_choice >&2
+	done
 }
 
 choose_role_group() {
-  local answer
-  while true; do
-    echo >&2
-    echo "$(tr_text choose_component):" >&2
-    echo "1) $(tr_text login)" >&2
-    echo "2) $(tr_text game)" >&2
-    echo "3) $(tr_text both)" >&2
-    echo "4) $(tr_text aa)" >&2
-    echo "5) $(tr_text full)" >&2
-    echo "0) $(tr_text back)" >&2
-    read -r -p "$(tr_text prompt_choose): " answer
-    case "$answer" in
-      1) printf '%s\n' "login"; return 0 ;;
-      2) printf '%s\n' "game"; return 0 ;;
-      3) printf '%s\n' "both"; return 0 ;;
-      4) printf '%s\n' "aa"; return 0 ;;
-      5) printf '%s\n' "full"; return 0 ;;
-      0|'') return 1 ;;
-      *) echo "$(tr_text wrong_choice)" >&2 ;;
-    esac
-  done
+	local answer
+	while true; do
+		echo >&2
+		echo "$(tr_text choose_component):" >&2
+		echo "1) $(tr_text login)" >&2
+		echo "2) $(tr_text game)" >&2
+		echo "3) $(tr_text both)" >&2
+		echo "4) $(tr_text aa)" >&2
+		echo "5) $(tr_text full)" >&2
+		echo "0) $(tr_text back)" >&2
+		read -r -p "$(tr_text prompt_choose): " answer
+		case "$answer" in
+		1)
+			printf '%s\n' "login"
+			return 0
+			;;
+		2)
+			printf '%s\n' "game"
+			return 0
+			;;
+		3)
+			printf '%s\n' "both"
+			return 0
+			;;
+		4)
+			printf '%s\n' "aa"
+			return 0
+			;;
+		5)
+			printf '%s\n' "full"
+			return 0
+			;;
+		0 | '') return 1 ;;
+		*) tr_text wrong_choice >&2 ;;
+		esac
+	done
 }
 
 choose_single_role() {
-  local answer
-  while true; do
-    echo >&2
-    echo "$(tr_text choose_component):" >&2
-    echo "1) $(tr_text login)" >&2
-    echo "2) $(tr_text game)" >&2
-    echo "3) $(tr_text aa)" >&2
-    echo "0) $(tr_text back)" >&2
-    read -r -p "$(tr_text prompt_choose): " answer
-    case "$answer" in
-      1) printf '%s\n' "login"; return 0 ;;
-      2) printf '%s\n' "game"; return 0 ;;
-      3) printf '%s\n' "aa"; return 0 ;;
-      0|'') return 1 ;;
-      *) echo "$(tr_text wrong_choice)" >&2 ;;
-    esac
-  done
+	local answer
+	while true; do
+		echo >&2
+		echo "$(tr_text choose_component):" >&2
+		echo "1) $(tr_text login)" >&2
+		echo "2) $(tr_text game)" >&2
+		echo "3) $(tr_text aa)" >&2
+		echo "0) $(tr_text back)" >&2
+		read -r -p "$(tr_text prompt_choose): " answer
+		case "$answer" in
+		1)
+			printf '%s\n' "login"
+			return 0
+			;;
+		2)
+			printf '%s\n' "game"
+			return 0
+			;;
+		3)
+			printf '%s\n' "aa"
+			return 0
+			;;
+		0 | '') return 1 ;;
+		*) tr_text wrong_choice >&2 ;;
+		esac
+	done
 }
 
 choose_maintenance_action() {
-  local answer
-  while true; do
-    echo >&2
-    echo "$(tr_text choose_maintenance):" >&2
-    echo "1) $(tr_text maintenance_on)" >&2
-    echo "2) $(tr_text maintenance_off)" >&2
-    echo "3) $(tr_text maintenance_status)" >&2
-    echo "0) $(tr_text back)" >&2
-    read -r -p "$(tr_text prompt_choose): " answer
-    case "$answer" in
-      1) printf '%s\n' "on"; return 0 ;;
-      2) printf '%s\n' "off"; return 0 ;;
-      3) printf '%s\n' "status"; return 0 ;;
-      0|'') return 1 ;;
-      *) echo "$(tr_text wrong_choice)" >&2 ;;
-    esac
-  done
+	local answer
+	while true; do
+		echo >&2
+		echo "$(tr_text choose_maintenance):" >&2
+		echo "1) $(tr_text maintenance_on)" >&2
+		echo "2) $(tr_text maintenance_off)" >&2
+		echo "3) $(tr_text maintenance_status)" >&2
+		echo "0) $(tr_text back)" >&2
+		read -r -p "$(tr_text prompt_choose): " answer
+		case "$answer" in
+		1)
+			printf '%s\n' "on"
+			return 0
+			;;
+		2)
+			printf '%s\n' "off"
+			return 0
+			;;
+		3)
+			printf '%s\n' "status"
+			return 0
+			;;
+		0 | '') return 1 ;;
+		*) tr_text wrong_choice >&2 ;;
+		esac
+	done
 }
 
 choose_language() {
-  local answer
-  while true; do
-    draw_header
-    echo "$(tr_text choose_language):"
-    echo "1) Русский"
-    echo "2) English"
-    echo "3) Українська"
-    echo "0) $(tr_text back)"
-    read -r -p "$(tr_text prompt_choose): " answer
-    case "$answer" in
-      1) UNIX_L2_CP_LANG="ru"; return 0 ;;
-      2) UNIX_L2_CP_LANG="en"; return 0 ;;
-      3) UNIX_L2_CP_LANG="uk"; return 0 ;;
-      0|'') return 0 ;;
-      *) echo "$(tr_text wrong_choice)"; pause_screen ;;
-    esac
-  done
+	local answer
+	while true; do
+		draw_header
+		echo "$(tr_text choose_language):"
+		echo "1) Русский"
+		echo "2) English"
+		echo "3) Українська"
+		echo "0) $(tr_text back)"
+		read -r -p "$(tr_text prompt_choose): " answer
+		case "$answer" in
+		1)
+			UNIX_L2_CP_LANG="ru"
+			return 0
+			;;
+		2)
+			UNIX_L2_CP_LANG="en"
+			return 0
+			;;
+		3)
+			UNIX_L2_CP_LANG="uk"
+			return 0
+			;;
+		0 | '') return 0 ;;
+		*)
+			tr_text wrong_choice
+			pause_screen
+			;;
+		esac
+	done
 }
 
 show_about() {
-  draw_header
-  echo "$(tr_text about_title)"
-  echo "$(tr_text about_lang)"
-  echo "$(tr_text about_cfg)"
-  echo
-  echo "Website: $UNIX_L2_CP_SITE"
-  echo "Version: $UNIX_L2_CP_VERSION"
-  echo "$UNIX_L2_CP_COPYRIGHT"
-  pause_screen
+	draw_header
+	tr_text about_title
+	tr_text about_lang
+	tr_text about_cfg
+	echo
+	echo "Website: $UNIX_L2_CP_SITE"
+	echo "Version: $UNIX_L2_CP_VERSION"
+	echo "$UNIX_L2_CP_COPYRIGHT"
+	pause_screen
 }
 
 run_status() {
-  draw_header
-  "$UNIX_L2_CP_ROOT/bin/l2ctl" status
-  pause_screen
+	draw_header
+	"$UNIX_L2_CP_ROOT/bin/l2ctl" status
+	pause_screen
 }
 
 run_full() {
-  draw_header
-  "$UNIX_L2_CP_ROOT/bin/l2ctl" full
-  pause_screen
+	draw_header
+	"$UNIX_L2_CP_ROOT/bin/l2ctl" full
+	pause_screen
 }
 
 run_card() {
-  local server
+	local server
 
-  server=$(choose_server 0) || return 0
-  draw_header
-  "$UNIX_L2_CP_ROOT/bin/l2ctl" card "$server"
-  pause_screen
+	server=$(choose_server 0) || return 0
+	draw_header
+	"$UNIX_L2_CP_ROOT/bin/l2ctl" card "$server"
+	pause_screen
 }
 
 run_doctor() {
-  draw_header
-  "$UNIX_L2_CP_ROOT/bin/l2doctor"
-  pause_screen
+	draw_header
+	"$UNIX_L2_CP_ROOT/bin/l2doctor"
+	pause_screen
 }
 
 run_action() {
-  local action
-  local server
-  local role
+	local action
+	local server
+	local role
 
-  action="$1"
-  server=$(choose_server 1) || return 0
-  role=$(choose_role_group) || return 0
+	action="$1"
+	server=$(choose_server 1) || return 0
+	role=$(choose_role_group) || return 0
 
-  draw_header
-  echo "Action    : $(action_label "$action")"
-  echo "Server    : $server"
-  echo "Component : $role"
-  echo
-  case "$action" in
-    stop|restart) printf '%s\n\n' "$(tr_text warn_live)" ;;
-  esac
+	draw_header
+	echo "Action    : $(action_label "$action")"
+	echo "Server    : $server"
+	echo "Component : $role"
+	echo
+	case "$action" in
+	stop | restart) printf '%s\n\n' "$(tr_text warn_live)" ;;
+	esac
 
-  if ! confirm_action; then
-    return 0
-  fi
+	if ! confirm_action; then
+		return 0
+	fi
 
-  draw_header
-  "$UNIX_L2_CP_ROOT/bin/l2ctl" "$action" "$server" "$role"
-  echo
-  "$UNIX_L2_CP_ROOT/bin/l2ctl" status
-  pause_screen
+	draw_header
+	"$UNIX_L2_CP_ROOT/bin/l2ctl" "$action" "$server" "$role"
+	echo
+	"$UNIX_L2_CP_ROOT/bin/l2ctl" status
+	pause_screen
 }
 
 run_maintenance() {
-  local server
-  local action
+	local server
+	local action
 
-  server=$(choose_server 1) || return 0
-  action=$(choose_maintenance_action) || return 0
+	server=$(choose_server 1) || return 0
+	action=$(choose_maintenance_action) || return 0
 
-  draw_header
-  echo "Action : $(action_label maintenance)"
-  echo "Server : $server"
-  echo "Mode   : $action"
-  echo
+	draw_header
+	echo "Action : $(action_label maintenance)"
+	echo "Server : $server"
+	echo "Mode   : $action"
+	echo
 
-  if [ "$action" != "status" ]; then
-    printf '%s\n\n' "$(tr_text warn_live)"
-    if ! confirm_action; then
-      return 0
-    fi
-  fi
+	if [ "$action" != "status" ]; then
+		printf '%s\n\n' "$(tr_text warn_live)"
+		if ! confirm_action; then
+			return 0
+		fi
+	fi
 
-  draw_header
-  "$UNIX_L2_CP_ROOT/bin/l2ctl" maintenance "$server" "$action"
-  echo
-  "$UNIX_L2_CP_ROOT/bin/l2ctl" status
-  pause_screen
+	draw_header
+	"$UNIX_L2_CP_ROOT/bin/l2ctl" maintenance "$server" "$action"
+	echo
+	"$UNIX_L2_CP_ROOT/bin/l2ctl" status
+	pause_screen
 }
 
 run_logs() {
-  local mode
-  local server
-  local role
-  local lines
+	local mode
+	local server
+	local role
+	local lines
 
-  mode="$1"
-  server=$(choose_server 0) || return 0
-  role=$(choose_single_role) || return 0
-  read -r -p "$(tr_text prompt_lines) [40]: " lines
-  lines="${lines:-40}"
+	mode="$1"
+	server=$(choose_server 0) || return 0
+	role=$(choose_single_role) || return 0
+	read -r -p "$(tr_text prompt_lines) [40]: " lines
+	lines="${lines:-40}"
 
-  draw_header
-  if [ "$mode" = "follow" ]; then
-    printf '%s\n\n' "$(tr_text follow_hint)"
-    "$UNIX_L2_CP_ROOT/bin/l2ctl" follow "$server" "$role" "$lines"
-  else
-    "$UNIX_L2_CP_ROOT/bin/l2ctl" logs "$server" "$role" "$lines"
-  fi
-  pause_screen
+	draw_header
+	if [ "$mode" = "follow" ]; then
+		printf '%s\n\n' "$(tr_text follow_hint)"
+		"$UNIX_L2_CP_ROOT/bin/l2ctl" follow "$server" "$role" "$lines"
+	else
+		"$UNIX_L2_CP_ROOT/bin/l2ctl" logs "$server" "$role" "$lines"
+	fi
+	pause_screen
 }
 
 while true; do
-  draw_header
-  echo "1) $(tr_text menu_status)"
-  echo "2) $(tr_text menu_full)"
-  echo "3) $(tr_text menu_card)"
-  echo "4) $(tr_text menu_start)"
-  echo "5) $(tr_text menu_stop)"
-  echo "6) $(tr_text menu_restart)"
-  echo "7) $(tr_text menu_maintenance)"
-  echo "8) $(tr_text menu_logs)"
-  echo "9) $(tr_text menu_follow)"
-  echo "10) $(tr_text menu_doctor)"
-  echo "11) $(tr_text menu_language)"
-  echo "12) $(tr_text menu_about)"
-  echo "0) $(tr_text menu_exit)"
-  echo
-  read -r -p "$(tr_text prompt_choose): " choice
+	draw_header
+	echo "1) $(tr_text menu_status)"
+	echo "2) $(tr_text menu_full)"
+	echo "3) $(tr_text menu_card)"
+	echo "4) $(tr_text menu_start)"
+	echo "5) $(tr_text menu_stop)"
+	echo "6) $(tr_text menu_restart)"
+	echo "7) $(tr_text menu_maintenance)"
+	echo "8) $(tr_text menu_logs)"
+	echo "9) $(tr_text menu_follow)"
+	echo "10) $(tr_text menu_doctor)"
+	echo "11) $(tr_text menu_language)"
+	echo "12) $(tr_text menu_about)"
+	echo "0) $(tr_text menu_exit)"
+	echo
+	read -r -p "$(tr_text prompt_choose): " choice
 
-  case "$choice" in
-    1) run_status ;;
-    2) run_full ;;
-    3) run_card ;;
-    4) run_action start ;;
-    5) run_action stop ;;
-    6) run_action restart ;;
-    7) run_maintenance ;;
-    8) run_logs logs ;;
-    9) run_logs follow ;;
-    10) run_doctor ;;
-    11) choose_language ;;
-    12) show_about ;;
-    0) exit 0 ;;
-    *) echo "$(tr_text wrong_choice)"; pause_screen ;;
-  esac
+	case "$choice" in
+	1) run_status ;;
+	2) run_full ;;
+	3) run_card ;;
+	4) run_action start ;;
+	5) run_action stop ;;
+	6) run_action restart ;;
+	7) run_maintenance ;;
+	8) run_logs logs ;;
+	9) run_logs follow ;;
+	10) run_doctor ;;
+	11) choose_language ;;
+	12) show_about ;;
+	0) exit 0 ;;
+	*)
+		tr_text wrong_choice
+		pause_screen
+		;;
+	esac
 done

@@ -2,7 +2,7 @@
 set -u
 
 SOURCE_FILE=$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$SOURCE_FILE")" && pwd)
-UNIX_L2_CP_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$SOURCE_FILE")" && pwd)
+UNIX_L2_CP_ROOT=$(CDPATH='' cd -- "$SCRIPT_DIR/.." && pwd)
 
 exec "$UNIX_L2_CP_ROOT/bin/l2menu" "$@"
