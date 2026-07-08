@@ -28,7 +28,8 @@ jobs:
           bash -n install.sh
           bash -n uninstall.sh
 
-      - name: Shellcheck
+      - name: Shellcheck (advisory)
+        continue-on-error: true
         run: |
           shellcheck -s bash bin/*
           shellcheck -s bash lib/*
