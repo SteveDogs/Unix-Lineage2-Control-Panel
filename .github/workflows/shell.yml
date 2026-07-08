@@ -25,10 +25,10 @@ jobs:
 
       - name: Shellcheck
         run: |
-          shellcheck bin/*
-          shellcheck lib/*
-          shellcheck install.sh
-          shellcheck uninstall.sh
+          shellcheck -s bash bin/*
+          shellcheck -s bash lib/*
+          shellcheck -s bash install.sh
+          shellcheck -s bash uninstall.sh
 
       - name: Shfmt
         run: |
