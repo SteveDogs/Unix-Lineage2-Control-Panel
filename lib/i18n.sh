@@ -6,11 +6,14 @@ tr_text() {
 
 	case "$lang:$1" in
 	ru:menu_status) echo "Краткий статус" ;;
+	ru:menu_monitor) echo "Мониторинг ресурсов" ;;
+	ru:menu_ports) echo "Проверка портов" ;;
 	ru:menu_full) echo "Полный статус" ;;
 	ru:menu_card) echo "Карточка сервера" ;;
 	ru:menu_start) echo "Запустить" ;;
 	ru:menu_stop) echo "Остановить" ;;
-	ru:menu_restart) echo "Перезапустить" ;;
+	ru:menu_restart) echo "Безопасный перезапуск" ;;
+	ru:menu_actions) echo "Управление" ;;
 	ru:menu_maintenance) echo "Режим обслуживания" ;;
 	ru:menu_logs) echo "Показать лог" ;;
 	ru:menu_follow) echo "Следить за логом" ;;
@@ -52,11 +55,14 @@ tr_text() {
 	ru:wrong_choice) echo "Неверный выбор. Попробуйте еще раз." ;;
 
 	en:menu_status) echo "Short status" ;;
+	en:menu_monitor) echo "Resource monitor" ;;
+	en:menu_ports) echo "Port check" ;;
 	en:menu_full) echo "Full status" ;;
 	en:menu_card) echo "Server card" ;;
 	en:menu_start) echo "Start" ;;
 	en:menu_stop) echo "Stop" ;;
-	en:menu_restart) echo "Restart" ;;
+	en:menu_restart) echo "Safe restart" ;;
+	en:menu_actions) echo "Control" ;;
 	en:menu_maintenance) echo "Maintenance mode" ;;
 	en:menu_logs) echo "Show log" ;;
 	en:menu_follow) echo "Follow log" ;;
@@ -98,11 +104,14 @@ tr_text() {
 	en:wrong_choice) echo "Wrong choice. Please try again." ;;
 
 	uk:menu_status) echo "Короткий статус" ;;
+	uk:menu_monitor) echo "Моніторинг ресурсів" ;;
+	uk:menu_ports) echo "Перевірка портів" ;;
 	uk:menu_full) echo "Повний статус" ;;
 	uk:menu_card) echo "Картка сервера" ;;
 	uk:menu_start) echo "Запустити" ;;
 	uk:menu_stop) echo "Зупинити" ;;
-	uk:menu_restart) echo "Перезапустити" ;;
+	uk:menu_restart) echo "Безпечний перезапуск" ;;
+	uk:menu_actions) echo "Керування" ;;
 	uk:menu_maintenance) echo "Режим обслуговування" ;;
 	uk:menu_logs) echo "Показати лог" ;;
 	uk:menu_follow) echo "Слідкувати за логом" ;;

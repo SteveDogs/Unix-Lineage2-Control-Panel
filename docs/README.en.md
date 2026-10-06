@@ -12,6 +12,9 @@ This project gives you a clean menu and simple commands for:
 
 - short status
 - colored status with LIVE and MAINT modes
+- CPU, RAM, and uptime monitoring for every component
+- occupied port checks before startup
+- safe restart with confirmation, countdown, and startup checks
 - full process list
 - server card with paths, logs, ports, and PIDs
 - start
@@ -66,12 +69,14 @@ sudo nano /etc/unix-l2-control-panel/servers.d/myserver.conf
 
 ```bash
 l2ctl status
+l2ctl monitor
+l2ctl ports
 l2ctl full
 l2ctl card myserver
 l2ctl start myserver aa
 l2ctl start myserver full
 l2ctl start myserver game
-l2ctl restart all login
+l2ctl restart all login --yes
 l2ctl maintenance myserver on
 l2ctl maintenance all status
 l2ctl stop myserver login
@@ -80,6 +85,10 @@ l2ctl logs myserver game 50
 l2ctl follow myserver login 100
 l2doctor
 ```
+
+The interactive menu confirms restarts with a Yes/No choice. A direct `l2ctl restart` command requires typing `YES`; scripts can pass `--yes`. Configure the countdown with `UNIX_L2_CP_RESTART_COUNTDOWN` in `settings.conf`.
+
+In the port check, `FREE` means the port is available, `OWN` means it belongs to the configured component, `BUSY` means another process owns it, and `MISMATCH` means the component is running on another port.
 
 ## Config format
 

@@ -12,6 +12,9 @@
 
 - краткий статус по серверам
 - цветной статус с режимами LIVE и MAINT
+- мониторинг CPU, RAM и времени работы каждого компонента
+- проверка занятых портов перед запуском
+- безопасный перезапуск с подтверждением, обратным отсчётом и проверками
 - полный список процессов
 - карточка сервера с путями, PID, портами и логами
 - запуск
@@ -66,12 +69,14 @@ sudo nano /etc/unix-l2-control-panel/servers.d/myserver.conf
 
 ```bash
 l2ctl status
+l2ctl monitor
+l2ctl ports
 l2ctl full
 l2ctl card myserver
 l2ctl start myserver aa
 l2ctl start myserver full
 l2ctl start myserver game
-l2ctl restart all login
+l2ctl restart all login --yes
 l2ctl maintenance myserver on
 l2ctl maintenance all status
 l2ctl stop myserver login
@@ -80,6 +85,10 @@ l2ctl logs myserver game 50
 l2ctl follow myserver login 100
 l2doctor
 ```
+
+В интерактивном меню перезапуск подтверждается выбором «Да». При прямом вызове `l2ctl restart` нужно ввести `YES`, а для скриптов можно передать `--yes`. Длительность обратного отсчёта задаётся через `UNIX_L2_CP_RESTART_COUNTDOWN` в `settings.conf`.
+
+В проверке портов `FREE` означает свободный порт, `OWN` — порт текущего компонента, `BUSY` — порт занят посторонним процессом, а `MISMATCH` — компонент работает на другом порту.
 
 ## Формат конфига
 

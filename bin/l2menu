@@ -12,6 +12,8 @@ export UNIX_L2_CP_ROOT
 . "$UNIX_L2_CP_ROOT/lib/config.sh"
 # shellcheck disable=SC1091
 . "$UNIX_L2_CP_ROOT/lib/i18n.sh"
+# shellcheck disable=SC1091
+. "$UNIX_L2_CP_ROOT/lib/process.sh"
 
 load_settings
 load_server_configs >/dev/null 2>&1 || true
@@ -22,13 +24,25 @@ pause_screen() {
 }
 
 draw_header() {
+	local border
+	local load
+	local memory
+	local uptime_seconds
+	local host_line
+
 	setup_colors
 	clear 2>/dev/null || true
-	printf '%s\n' "${C_CYAN}========================================${C_RESET}"
-	printf '%s\n' "${C_BOLD}${UNIX_L2_CP_NAME}${C_RESET}"
-	printf '%s\n' "${C_DIM}${UNIX_L2_CP_AUTHOR} | ${UNIX_L2_CP_SITE}${C_RESET}"
-	printf '%s\n' "${C_DIM}Version ${UNIX_L2_CP_VERSION} | Host: $(hostname) | $(date '+%Y-%m-%d %H:%M:%S')${C_RESET}"
-	printf '%s\n' "${C_CYAN}========================================${C_RESET}"
+	border="============================================================================"
+	load=$(awk '{print $1}' /proc/loadavg 2>/dev/null || printf '%s' '-')
+	memory=$(free -h 2>/dev/null | awk '/^Mem:/ {printf "%s/%s", $3, $2}' || printf '%s' '-')
+	uptime_seconds=$(awk -F. '{print $1}' /proc/uptime 2>/dev/null || printf '0')
+	host_line="$(hostname) | Load $load | RAM $memory | Up $(format_duration "$uptime_seconds")"
+
+	printf '%s%s%s\n' "$C_CYAN" "$border" "$C_RESET"
+	printf '  %s%s%s  %sv%s%s\n' "$C_BOLD" "$UNIX_L2_CP_NAME" "$C_RESET" "$C_CYAN" "$UNIX_L2_CP_VERSION" "$C_RESET"
+	printf '  %s%s%s\n' "$C_DIM" "$host_line" "$C_RESET"
+	printf '  %s%s | %s%s\n' "$C_DIM" "$UNIX_L2_CP_AUTHOR" "$UNIX_L2_CP_SITE" "$C_RESET"
+	printf '%s%s%s\n' "$C_CYAN" "$border" "$C_RESET"
 	echo
 }
 
@@ -252,6 +266,18 @@ run_status() {
 	pause_screen
 }
 
+run_monitor() {
+	draw_header
+	"$UNIX_L2_CP_ROOT/bin/l2ctl" monitor
+	pause_screen
+}
+
+run_ports() {
+	draw_header
+	"$UNIX_L2_CP_ROOT/bin/l2ctl" ports
+	pause_screen
+}
+
 run_full() {
 	draw_header
 	"$UNIX_L2_CP_ROOT/bin/l2ctl" full
@@ -296,7 +322,11 @@ run_action() {
 	fi
 
 	draw_header
-	"$UNIX_L2_CP_ROOT/bin/l2ctl" "$action" "$server" "$role"
+	if [ "$action" = "restart" ]; then
+		"$UNIX_L2_CP_ROOT/bin/l2ctl" restart "$server" "$role" --yes
+	else
+		"$UNIX_L2_CP_ROOT/bin/l2ctl" "$action" "$server" "$role"
+	fi
 	echo
 	"$UNIX_L2_CP_ROOT/bin/l2ctl" status
 	pause_screen
@@ -353,35 +383,35 @@ run_logs() {
 
 while true; do
 	draw_header
-	echo "1) $(tr_text menu_status)"
-	echo "2) $(tr_text menu_full)"
-	echo "3) $(tr_text menu_card)"
-	echo "4) $(tr_text menu_start)"
-	echo "5) $(tr_text menu_stop)"
-	echo "6) $(tr_text menu_restart)"
-	echo "7) $(tr_text menu_maintenance)"
-	echo "8) $(tr_text menu_logs)"
-	echo "9) $(tr_text menu_follow)"
-	echo "10) $(tr_text menu_doctor)"
-	echo "11) $(tr_text menu_language)"
-	echo "12) $(tr_text menu_about)"
+	"$UNIX_L2_CP_ROOT/bin/l2ctl" status
+	echo
+	printf '%s%s%s\n' "$C_BOLD" "$(tr_text menu_actions)" "$C_RESET"
+	printf '  %-34s %s\n' "1) $(tr_text menu_status)" "8) $(tr_text menu_restart)"
+	printf '  %-34s %s\n' "2) $(tr_text menu_monitor)" "9) $(tr_text menu_maintenance)"
+	printf '  %-34s %s\n' "3) $(tr_text menu_ports)" "10) $(tr_text menu_logs)"
+	printf '  %-34s %s\n' "4) $(tr_text menu_full)" "11) $(tr_text menu_follow)"
+	printf '  %-34s %s\n' "5) $(tr_text menu_card)" "12) $(tr_text menu_doctor)"
+	printf '  %-34s %s\n' "6) $(tr_text menu_start)" "13) $(tr_text menu_language)"
+	printf '  %-34s %s\n' "7) $(tr_text menu_stop)" "14) $(tr_text menu_about)"
 	echo "0) $(tr_text menu_exit)"
 	echo
 	read -r -p "$(tr_text prompt_choose): " choice
 
 	case "$choice" in
 	1) run_status ;;
-	2) run_full ;;
-	3) run_card ;;
-	4) run_action start ;;
-	5) run_action stop ;;
-	6) run_action restart ;;
-	7) run_maintenance ;;
-	8) run_logs logs ;;
-	9) run_logs follow ;;
-	10) run_doctor ;;
-	11) choose_language ;;
-	12) show_about ;;
+	2) run_monitor ;;
+	3) run_ports ;;
+	4) run_full ;;
+	5) run_card ;;
+	6) run_action start ;;
+	7) run_action stop ;;
+	8) run_action restart ;;
+	9) run_maintenance ;;
+	10) run_logs logs ;;
+	11) run_logs follow ;;
+	12) run_doctor ;;
+	13) choose_language ;;
+	14) show_about ;;
 	0) exit 0 ;;
 	*)
 		tr_text wrong_choice

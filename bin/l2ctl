@@ -22,12 +22,14 @@ Unix Lineage2 Control Panel
 
 Usage:
   l2ctl status
+  l2ctl monitor
+  l2ctl ports
   l2ctl full
   l2ctl all
   l2ctl card <server>
   l2ctl start <server|all> [login|game|both|aa|full]
   l2ctl stop <server|all> [login|game|both|aa|full]
-  l2ctl restart <server|all> [login|game|both|aa|full]
+  l2ctl restart <server|all> [login|game|both|aa|full] [--yes]
   l2ctl maintenance <server|all> <on|off|status>
   l2ctl logs <server> <login|game|aa> [lines]
   l2ctl follow <server> <login|game|aa> [lines]
@@ -209,6 +211,8 @@ status_table() {
 	local aa
 	local server_name
 
+	printf '%s%sSERVER STATUS%s\n' "$C_BOLD" "$C_CYAN" "$C_RESET"
+	printf '%s\n' "----------------------------------------------------------------------------"
 	pad_cell "SERVER" 14
 	printf '  '
 	pad_cell "MODE" 5
@@ -235,6 +239,101 @@ status_table() {
 		printf '  '
 		printf '%s\n' "$aa"
 	done
+	printf '%s\n' "----------------------------------------------------------------------------"
+}
+
+host_summary() {
+	local load
+	local memory
+	local disk
+	local uptime_seconds
+
+	load=$(awk '{print $1, $2, $3}' /proc/loadavg 2>/dev/null || printf '%s' '-')
+	memory=$(free -m 2>/dev/null | awk '/^Mem:/ {printf "%s/%s MB", $3, $2}' || printf '%s' '-')
+	disk=$(df -h / 2>/dev/null | awk 'NR == 2 {printf "%s/%s (%s)", $3, $2, $5}' || printf '%s' '-')
+	uptime_seconds=$(awk -F. '{print $1}' /proc/uptime 2>/dev/null || printf '0')
+
+	printf '%s%sHOST%s  %s\n' "$C_BOLD" "$C_CYAN" "$C_RESET" "$(hostname)"
+	printf '  Load    : %s\n' "$load"
+	printf '  Memory  : %s\n' "$memory"
+	printf '  Disk /  : %s\n' "$disk"
+	printf '  Uptime  : %s\n' "$(format_duration "$uptime_seconds")"
+}
+
+monitor_table() {
+	local id
+	local role
+	local state
+	local pid
+	local port
+	local cpu
+	local memory_kb
+	local memory
+	local uptime
+	local server_name
+
+	host_summary
+	printf '\n%s%sCOMPONENT RESOURCES%s\n' "$C_BOLD" "$C_CYAN" "$C_RESET"
+	printf '%s\n' "----------------------------------------------------------------------------"
+	printf '%-12s %-5s %-8s %-8s %-5s %-6s %-7s %-8s\n' \
+		"SERVER" "ROLE" "STATE" "PID" "PORT" "CPU" "RAM" "UPTIME"
+	printf '%s\n' "----------------------------------------------------------------------------"
+
+	for id in "${UL2CP_SERVER_IDS[@]}"; do
+		for role in login game aa; do
+			component_enabled "$id" "$role" || continue
+			state=$(component_state "$id" "$role")
+			server_name=$(short_label "$(server_label "$id")" 12)
+			if [ "$state" = "RUN" ]; then
+				pid=$(component_first_pid "$id" "$role" 2>/dev/null || printf '%s' '-')
+				port=$(component_current_port "$id" "$role" 2>/dev/null || component_port_hint "$id" "$role")
+				cpu=$(component_cpu_percent "$id" "$role" 2>/dev/null || printf '%s' '-')
+				memory_kb=$(component_memory_kb "$id" "$role" 2>/dev/null || printf '0')
+				memory=$(format_memory_kb "$memory_kb")
+				uptime=$(component_uptime "$id" "$role" 2>/dev/null || printf '%s' '-')
+			else
+				pid="-"
+				port=$(component_port_hint "$id" "$role")
+				cpu="-"
+				memory="-"
+				uptime="-"
+			fi
+			[ "$cpu" = "-" ] || cpu="${cpu}%"
+			printf '%-12s %-5s %-8s %-8s %-5s %-6s %-7s %-8s\n' \
+				"$server_name" "${role^^}" "$state" "$pid" "${port:--}" "$cpu" "$memory" "$uptime"
+		done
+	done
+	printf '%s\n' "----------------------------------------------------------------------------"
+}
+
+format_port_check() {
+	case "$1" in
+	FREE* | OWN*) printf '%s%s%s' "$C_GREEN" "$1" "$C_RESET" ;;
+	BUSY* | MISMATCH*) printf '%s%s%s' "$C_RED" "$1" "$C_RESET" ;;
+	*) printf '%s%s%s' "$C_YELLOW" "$1" "$C_RESET" ;;
+	esac
+}
+
+ports_table() {
+	local id
+	local role
+	local port
+	local result
+
+	printf '%s%sCONFIGURED PORTS%s\n' "$C_BOLD" "$C_CYAN" "$C_RESET"
+	printf '%s\n' "----------------------------------------------------------------------------"
+	printf '%-16s %-7s %-8s %s\n' "SERVER" "ROLE" "PORT" "RESULT"
+	printf '%s\n' "----------------------------------------------------------------------------"
+	for id in "${UL2CP_SERVER_IDS[@]}"; do
+		for role in login game aa; do
+			component_enabled "$id" "$role" || continue
+			port=$(component_port_hint "$id" "$role")
+			result=$(component_port_check_text "$id" "$role")
+			printf '%-16s %-7s %-8s %s\n' \
+				"$(short_label "$(server_label "$id")" 16)" "${role^^}" "${port:--}" "$(format_port_check "$result")"
+		done
+	done
+	printf '%s\n' "----------------------------------------------------------------------------"
 }
 
 show_card() {
@@ -366,23 +465,93 @@ run_role_group() {
 	target_role="$3"
 	rc=0
 
-	case "$target_role" in
-	both) set -- login game ;;
-	full) set -- login aa game ;;
-	*) set -- "$target_role" ;;
-	esac
-
 	for server_id in $(server_targets "$target_server"); do
+		if [ "$action" = "restart" ]; then
+			safe_restart_group "$server_id" "$target_role" || rc=1
+			continue
+		fi
+
+		case "$target_role" in
+		both) set -- login game ;;
+		full) set -- login aa game ;;
+		*) set -- "$target_role" ;;
+		esac
 		for role in "$@"; do
+			component_enabled "$server_id" "$role" || continue
 			case "$action" in
 			start) start_component "$server_id" "$role" || rc=1 ;;
 			stop) stop_component "$server_id" "$role" || rc=1 ;;
-			restart) restart_component "$server_id" "$role" || rc=1 ;;
 			esac
 		done
 	done
 
 	return "$rc"
+}
+
+safe_restart_group() {
+	local server_id
+	local target_role
+	local stop_roles
+	local start_roles
+	local role
+
+	server_id="$1"
+	target_role="$2"
+	case "$target_role" in
+	both)
+		stop_roles="game login"
+		start_roles="login game"
+		;;
+	full)
+		stop_roles="game aa login"
+		start_roles="login aa game"
+		;;
+	*)
+		stop_roles="$target_role"
+		start_roles="$target_role"
+		;;
+	esac
+
+	printf 'Safe restart: %s (%s)\n' "$(server_label "$server_id")" "$target_role"
+	for role in $stop_roles; do
+		component_enabled "$server_id" "$role" || continue
+		stop_component "$server_id" "$role" || return 1
+	done
+	for role in $start_roles; do
+		component_enabled "$server_id" "$role" || continue
+		start_component "$server_id" "$role" || {
+			printf 'Safe restart stopped: %s/%s did not pass startup checks.\n' "$server_id" "$role"
+			return 1
+		}
+	done
+	printf 'Safe restart completed: %s (%s)\n' "$(server_label "$server_id")" "$target_role"
+}
+
+confirm_restart_cli() {
+	local answer
+
+	if [ ! -t 0 ]; then
+		printf '%s\n' "Restart requires an interactive confirmation or the --yes flag."
+		return 1
+	fi
+	printf 'Restart target: %s, component: %s\n' "$1" "$2"
+	printf '%s' "Type YES to continue: "
+	read -r answer
+	[ "$answer" = "YES" ]
+}
+
+restart_countdown() {
+	local seconds
+
+	seconds="${UNIX_L2_CP_RESTART_COUNTDOWN:-5}"
+	case "$seconds" in
+	'' | *[!0-9]*) seconds=5 ;;
+	esac
+	while [ "$seconds" -gt 0 ]; do
+		printf 'Restart starts in %s... Press Ctrl+C to cancel.\n' "$seconds"
+		sleep 1
+		seconds=$((seconds - 1))
+	done
 }
 
 run_maintenance() {
@@ -414,6 +583,12 @@ case "${1:-}" in
 status)
 	status_table
 	;;
+monitor)
+	monitor_table
+	;;
+ports)
+	ports_table
+	;;
 full)
 	full_status
 	;;
@@ -424,10 +599,19 @@ card)
 	ensure_single_server "${2:-}" || exit 1
 	show_card "$2"
 	;;
-start | stop | restart)
+start | stop)
 	ensure_server_target "${2:-}" || exit 1
 	ensure_role "${3:-both}" || exit 1
 	run_role_group "$1" "$2" "${3:-both}"
+	;;
+restart)
+	ensure_server_target "${2:-}" || exit 1
+	ensure_role "${3:-both}" || exit 1
+	if [ "${4:-}" != "--yes" ]; then
+		confirm_restart_cli "$2" "${3:-both}" || exit 1
+	fi
+	restart_countdown
+	run_role_group restart "$2" "${3:-both}"
 	;;
 maintenance)
 	ensure_server_target "${2:-}" || exit 1

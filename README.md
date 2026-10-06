@@ -5,7 +5,7 @@ Simple terminal control panel for Lineage 2 login, game, and Active Anticheat pr
 Created by Steve Dog  
 Website: [steve.dog](https://steve.dog)
 
-Current release: `1.3.0`
+Current release: `1.4.0`
 
 ## Languages
 
@@ -17,6 +17,9 @@ Current release: `1.3.0`
 
 - Shows clean server status instead of messy `ps ax` output
 - Shows colored status with live and maintenance modes
+- Shows CPU, RAM, uptime, PID, and port usage for every running component
+- Checks configured ports and blocks startup when another process owns the port
+- Uses confirmation, countdown, dependency order, and startup checks for safe restarts
 - Starts, stops, and restarts `login`, `game`, `aa`, or full stack
 - Supports mass actions for all configured servers
 - Supports maintenance mode for single or all servers
@@ -47,12 +50,14 @@ l2
 ```bash
 l2
 l2ctl status
+l2ctl monitor
+l2ctl ports
 l2ctl full
 l2ctl card myserver
 l2ctl start myserver aa
 l2ctl start myserver full
 l2ctl start myserver game
-l2ctl restart all login
+l2ctl restart all login --yes
 l2ctl maintenance myserver on
 l2ctl maintenance all status
 l2ctl stop myserver login
@@ -61,6 +66,10 @@ l2ctl logs myserver game 50
 l2ctl follow myserver login 100
 l2doctor
 ```
+
+Interactive restarts ask for confirmation automatically. A direct `l2ctl restart` command requires typing `YES`; scripts can pass `--yes`. The countdown is configured with `UNIX_L2_CP_RESTART_COUNTDOWN` in `settings.conf`.
+
+Port diagnostics use `FREE`, `OWN`, `BUSY`, and `MISMATCH`. `MISMATCH` means the component is running but not on its configured port.
 
 ## Project structure
 

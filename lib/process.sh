@@ -88,6 +88,63 @@ port_is_listening() {
   '
 }
 
+port_listener_line() {
+	local port
+
+	port="$1"
+	command -v ss >/dev/null 2>&1 || return 1
+	ss -H -lntp 2>/dev/null | awk -v port="$port" '
+    {
+      endpoint = $4
+      sub(/^.*:/, "", endpoint)
+      if (endpoint == port) {
+        print
+        exit
+      }
+    }
+  '
+}
+
+port_listener_pid() {
+	local line
+
+	line=$(port_listener_line "$1") || return 1
+	printf '%s\n' "$line" | sed -n 's/.*pid=\([0-9][0-9]*\).*/\1/p' | head -n 1
+}
+
+port_listener_info() {
+	local port
+	local pid
+	local process
+
+	port="$1"
+	pid=$(port_listener_pid "$port" 2>/dev/null || printf '')
+	if [ -n "$pid" ]; then
+		process=$(ps -o comm= -p "$pid" 2>/dev/null | awk '{$1=$1; print}' || printf '')
+		printf 'pid %s%s\n' "$pid" "${process:+, $process}"
+	else
+		printf '%s\n' "unknown process"
+	fi
+}
+
+check_component_port_available() {
+	local id
+	local role
+	local port
+
+	id="$1"
+	role="$2"
+	port=$(component_port_hint "$id" "$role")
+	[ -n "$port" ] || return 0
+	command -v ss >/dev/null 2>&1 || return 0
+
+	if port_is_listening "$port"; then
+		printf 'Cannot start %s/%s: port %s is already in use (%s)\n' \
+			"$id" "$role" "$port" "$(port_listener_info "$port")"
+		return 1
+	fi
+}
+
 primary_port() {
 	local old_ifs
 	local -a parts
@@ -260,6 +317,126 @@ component_first_pid() {
 	pids=$(find_component_pids "$1" "$2")
 	[ -n "$pids" ] || return 1
 	printf '%s\n' "$pids" | head -n 1
+}
+
+component_cpu_percent() {
+	local pids
+	local pid
+	local values
+
+	pids=$(find_component_pids "$1" "$2")
+	[ -n "$pids" ] || return 1
+	values=""
+	for pid in $pids; do
+		values="${values}$(ps -o %cpu= -p "$pid" 2>/dev/null || printf '0')\n"
+	done
+	printf '%b' "$values" | awk '{sum += $1} END {printf "%.1f\n", sum}'
+}
+
+component_memory_kb() {
+	local pids
+	local pid
+	local values
+
+	pids=$(find_component_pids "$1" "$2")
+	[ -n "$pids" ] || return 1
+	values=""
+	for pid in $pids; do
+		values="${values}$(ps -o rss= -p "$pid" 2>/dev/null || printf '0')\n"
+	done
+	printf '%b' "$values" | awk '{sum += $1} END {printf "%.0f\n", sum}'
+}
+
+format_memory_kb() {
+	awk -v kb="${1:-0}" 'BEGIN {
+    if (kb >= 1048576) printf "%.1fG\n", kb / 1048576
+    else if (kb >= 1024) printf "%.0fM\n", kb / 1024
+    else printf "%.0fK\n", kb
+  }'
+}
+
+format_duration() {
+	local seconds
+	local days
+	local hours
+	local minutes
+
+	seconds="${1:-0}"
+	case "$seconds" in
+	'' | *[!0-9]*) seconds=0 ;;
+	esac
+	days=$((seconds / 86400))
+	hours=$(((seconds % 86400) / 3600))
+	minutes=$(((seconds % 3600) / 60))
+
+	if [ "$days" -gt 0 ]; then
+		printf '%dd%02dh\n' "$days" "$hours"
+	elif [ "$hours" -gt 0 ]; then
+		printf '%dh%02dm\n' "$hours" "$minutes"
+	elif [ "$minutes" -gt 0 ]; then
+		printf '%dm\n' "$minutes"
+	else
+		printf '%ds\n' "$seconds"
+	fi
+}
+
+component_uptime() {
+	local pid
+	local seconds
+
+	pid=$(component_first_pid "$1" "$2") || return 1
+	seconds=$(ps -o etimes= -p "$pid" 2>/dev/null | awk '{$1=$1; print}')
+	[ -n "$seconds" ] || return 1
+	format_duration "$seconds"
+}
+
+component_port_check_text() {
+	local id
+	local role
+	local port
+	local pid
+	local component_pids
+	local current_ports
+	local ports
+
+	id="$1"
+	role="$2"
+	if ! component_enabled "$id" "$role"; then
+		printf '%s\n' "DISABLED"
+		return 0
+	fi
+
+	port=$(component_port_hint "$id" "$role")
+	if [ -z "$port" ]; then
+		printf '%s\n' "NOT SET"
+		return 0
+	fi
+	if ! command -v ss >/dev/null 2>&1; then
+		printf '%s\n' "NO SS"
+		return 0
+	fi
+	component_pids=$(find_component_pids "$id" "$role")
+	if ! port_is_listening "$port"; then
+		if [ -n "$component_pids" ]; then
+			current_ports=""
+			for pid in $component_pids; do
+				ports=$(ports_for_pid "$pid")
+				[ -n "$ports" ] || continue
+				current_ports="${current_ports}${current_ports:+,}${ports}"
+			done
+			printf 'MISMATCH running on %s\n' "${current_ports:--}"
+			return 0
+		fi
+		printf '%s\n' "FREE"
+		return 0
+	fi
+
+	pid=$(port_listener_pid "$port" 2>/dev/null || printf '')
+	if [ -n "$pid" ] && printf '%s\n' "$component_pids" | grep -Fxq "$pid"; then
+		printf 'OWN pid %s\n' "$pid"
+	else
+		printf 'BUSY %s\n' "$(port_listener_info "$port")"
+	fi
 }
 
 component_current_port() {
@@ -504,6 +681,8 @@ start_component() {
 		printf '%s/%s already running: %s\n' "$id" "$role" "$(component_status_text "$id" "$role")"
 		return 0
 	fi
+
+	check_component_port_available "$id" "$role" || return 1
 
 	if [ -n "$service" ]; then
 		if ! command -v systemctl >/dev/null 2>&1 || ! systemctl cat "$service" >/dev/null 2>&1; then

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.0
+
+- Added a redesigned dashboard with live server status and host information.
+- Added component CPU, RAM, uptime, PID, and port monitoring.
+- Added configured port diagnostics and automatic conflict checks before startup.
+- Added safe restart confirmation, countdown, dependency order, and startup verification.
+
 ## 1.3.0
 
 - Added optional systemd service control for login, game, and AA components.
