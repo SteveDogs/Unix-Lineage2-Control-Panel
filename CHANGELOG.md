@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0
+
+- Added optional systemd service control for login, game, and AA components.
+- Server cards and diagnostics now show configured service names.
+- Kept the existing script-based process control fully compatible.
+
 ## 1.2.0
 
 - Added Active Anticheat support with separate `AA` status, logs, and diagnostics.

@@ -483,6 +483,7 @@ start_component() {
 	local loop
 	local owner
 	local pids
+	local service
 	local started_at
 
 	id="$1"
@@ -496,6 +497,7 @@ start_component() {
 	dir=$(component_dir "$id" "$role") || return 1
 	loop=$(component_loop "$id" "$role") || return 1
 	owner=$(server_owner "$id")
+	service=$(component_service "$id" "$role")
 
 	pids=$(find_component_pids "$id" "$role")
 	if [ -n "$pids" ]; then
@@ -503,7 +505,12 @@ start_component() {
 		return 0
 	fi
 
-	if [ "$role" = "aa" ]; then
+	if [ -n "$service" ]; then
+		if ! command -v systemctl >/dev/null 2>&1 || ! systemctl cat "$service" >/dev/null 2>&1; then
+			printf 'Cannot start %s/%s: systemd service not found: %s\n' "$id" "$role" "$service"
+			return 1
+		fi
+	elif [ "$role" = "aa" ]; then
 		if [ ! -f "$dir/$loop" ]; then
 			printf 'Cannot start %s/%s: missing start script %s/%s\n' "$id" "$role" "$dir" "$loop"
 			return 1
@@ -516,7 +523,14 @@ start_component() {
 	fi
 
 	started_at=$(date +%s)
-	run_as_owner "$owner" "$dir" "$loop" "$role"
+	if [ -n "$service" ]; then
+		systemctl start "$service" || {
+			printf 'Cannot start %s/%s: systemctl start %s failed\n' "$id" "$role" "$service"
+			return 1
+		}
+	else
+		run_as_owner "$owner" "$dir" "$loop" "$role"
+	fi
 	sleep "$UNIX_L2_CP_START_WAIT"
 
 	if wait_for_component_ready "$id" "$role" "$started_at"; then
@@ -537,27 +551,39 @@ stop_component() {
 	local -a pid_list
 	local -a loop_list
 	local screen_name
+	local service
+	local service_active
 	local wait_left
 
 	id="$1"
 	role="$2"
+	service=$(component_service "$id" "$role")
+	service_active=0
+	if [ -n "$service" ] && command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet "$service"; then
+		service_active=1
+	fi
 
 	pids=$(find_component_pids "$id" "$role")
 	loops=$(find_component_loop_pids "$id" "$role")
 
-	if [ -z "$pids" ] && [ -z "$loops" ]; then
+	if [ -z "$pids" ] && [ -z "$loops" ] && [ "$service_active" -eq 0 ]; then
 		printf '%s/%s already stopped\n' "$id" "$role"
 		return 0
 	fi
 
-	if [ "$role" = "aa" ]; then
+	if [ -n "$service" ]; then
+		systemctl stop "$service" || {
+			printf 'Cannot stop %s/%s: systemctl stop %s failed\n' "$id" "$role" "$service"
+			return 1
+		}
+	elif [ "$role" = "aa" ]; then
 		screen_name=$(component_screen_name "$id" aa)
 		if [ -n "$screen_name" ] && command -v screen >/dev/null 2>&1; then
 			screen -S "$screen_name" -X quit >/dev/null 2>&1 || true
 		fi
 	fi
 
-	if [ -n "$pids" ]; then
+	if [ -z "$service" ] && [ -n "$pids" ]; then
 		mapfile -t pid_list <<<"$pids"
 		kill -TERM "${pid_list[@]}" 2>/dev/null || true
 	fi
@@ -577,7 +603,7 @@ stop_component() {
 	fi
 
 	loops=$(find_component_loop_pids "$id" "$role")
-	if [ -n "$loops" ]; then
+	if [ -z "$service" ] && [ -n "$loops" ]; then
 		mapfile -t loop_list <<<"$loops"
 		kill -TERM "${loop_list[@]}" 2>/dev/null || true
 		sleep 1

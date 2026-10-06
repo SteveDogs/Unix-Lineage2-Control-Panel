@@ -18,6 +18,7 @@ This project gives you a clean menu and simple commands for:
 - stop
 - restart
 - Active Anticheat support with separate folder and `startscreen.sh`
+- systemd service support for login, game, and AA
 - mass actions for all configured servers
 - maintenance mode
 - log viewing
@@ -94,6 +95,7 @@ LOGIN_MATCH="AuthServer"
 LOGIN_LOG="log/stdout.log"
 LOGIN_PORT_HINT="2106"
 LOGIN_READY_MATCH=""
+LOGIN_SERVICE=""
 
 AA_ENABLED="false"
 AA_DIR="/home/games/anticheat"
@@ -104,6 +106,7 @@ AA_LOG="log.txt"
 AA_PORT_HINT="11000"
 AA_READY_MATCH="Listening to players on address"
 AA_SCREEN_NAME="myserver-aa"
+AA_SERVICE=""
 
 GAME_ENABLED="true"
 GAME_DIR="/home/games/gameserver"
@@ -112,6 +115,7 @@ GAME_MATCH="GameServer"
 GAME_LOG="log/stdout.log"
 GAME_PORT_HINT="7777"
 GAME_READY_MATCH=""
+GAME_SERVICE=""
 ```
 
 `LOGIN_READY_MATCH`, `AA_READY_MATCH`, and `GAME_READY_MATCH` can stay empty or contain a log line that means the server is fully started.
@@ -123,6 +127,17 @@ If your setup uses a separate `Server` folder for Active Anticheat, fill the `AA
 - `AA_DIR` should point to the Anticheat folder, not to the game server folder.
 - The panel starts AA through `sh startscreen.sh`, because this is the standard launch style from the [official Active Anticheat Linux manual](https://active-ac.com/manual/ru/lineage2/install_linux/).
 - If your game server uses Active Anticheat, keep `LD_PRELOAD=$PWD/active_pr64.so` in the game server start script.
+
+## systemd services
+
+If a component is managed by systemd, add its service name to the server config:
+
+```bash
+LOGIN_SERVICE="my-login.service"
+GAME_SERVICE="my-game.service"
+```
+
+You can also use `AA_SERVICE`. Leave the matching field empty when the component is managed by its usual start script.
 
 ## Languages
 

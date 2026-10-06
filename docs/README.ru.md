@@ -18,6 +18,7 @@
 - остановка
 - перезапуск
 - поддержка Active Anticheat через отдельную папку и `startscreen.sh`
+- поддержка служб systemd для login, game и AA
 - массовые действия по всем серверам
 - режим обслуживания
 - просмотр логов
@@ -96,6 +97,7 @@ LOGIN_MATCH="AuthServer"
 LOGIN_LOG="log/stdout.log"
 LOGIN_PORT_HINT="2106"
 LOGIN_READY_MATCH=""
+LOGIN_SERVICE=""
 
 AA_ENABLED="false"
 AA_DIR="/home/games/anticheat"
@@ -106,6 +108,7 @@ AA_LOG="log.txt"
 AA_PORT_HINT="11000"
 AA_READY_MATCH="Listening to players on address"
 AA_SCREEN_NAME="myserver-aa"
+AA_SERVICE=""
 
 GAME_ENABLED="true"
 GAME_DIR="/home/games/gameserver"
@@ -114,6 +117,7 @@ GAME_MATCH="GameServer"
 GAME_LOG="log/stdout.log"
 GAME_PORT_HINT="7777"
 GAME_READY_MATCH=""
+GAME_SERVICE=""
 ```
 
 `LOGIN_READY_MATCH`, `AA_READY_MATCH` и `GAME_READY_MATCH` можно оставить пустыми или указать текст из лога, по которому панель поймет, что сервер действительно поднялся.
@@ -125,6 +129,17 @@ GAME_READY_MATCH=""
 - `AA_DIR` должен вести в папку античита, а не в папку геймсервера.
 - Панель запускает AA через `sh startscreen.sh`, потому что это стандартный вариант из [официальной Linux-инструкции Active Anticheat](https://active-ac.com/manual/ru/lineage2/install_linux/).
 - Если у вас включен Active Anticheat, не убирайте `LD_PRELOAD=$PWD/active_pr64.so` из скрипта запуска геймсервера.
+
+## Службы systemd
+
+Если компонент запускается через systemd, укажите имя его службы в конфиге сервера:
+
+```bash
+LOGIN_SERVICE="my-login.service"
+GAME_SERVICE="my-game.service"
+```
+
+Для AA можно использовать `AA_SERVICE`. Если компонент запускается обычным скриптом, оставьте соответствующее поле пустым.
 
 ## Языки
 

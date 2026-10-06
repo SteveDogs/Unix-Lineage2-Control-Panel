@@ -250,6 +250,7 @@ show_card() {
 	local pid
 	local screen_name
 	local run_loop
+	local service
 
 	id="$1"
 
@@ -274,6 +275,7 @@ show_card() {
 		match=$(component_match "$id" "$role")
 		log_path=$(component_log_path "$id" "$role")
 		ready_match=$(component_ready_match "$id" "$role")
+		service=$(component_service "$id" "$role")
 		pid=$(component_first_pid "$id" "$role" 2>/dev/null || printf '%s' '-')
 		if [ "$role" = "aa" ]; then
 			port=$(component_port_hint "$id" "$role")
@@ -288,6 +290,7 @@ show_card() {
 		printf '  match      : %s\n' "$match"
 		printf '  log        : %s\n' "$log_path"
 		printf '  ready text : %s\n' "${ready_match:--}"
+		printf '  service    : %s\n' "${service:--}"
 		if [ "$role" = "aa" ]; then
 			run_loop=$(component_run_loop "$id" "$role")
 			printf '  start      : %s\n' "$loop"

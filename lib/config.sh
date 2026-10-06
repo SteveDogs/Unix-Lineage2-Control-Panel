@@ -10,6 +10,7 @@ declare -gA UL2CP_LOGIN_MATCH=()
 declare -gA UL2CP_LOGIN_LOG=()
 declare -gA UL2CP_LOGIN_PORT_HINT=()
 declare -gA UL2CP_LOGIN_READY_MATCH=()
+declare -gA UL2CP_LOGIN_SERVICE=()
 declare -gA UL2CP_AA_ENABLED=()
 declare -gA UL2CP_AA_DIR=()
 declare -gA UL2CP_AA_START=()
@@ -19,6 +20,7 @@ declare -gA UL2CP_AA_LOG=()
 declare -gA UL2CP_AA_PORT_HINT=()
 declare -gA UL2CP_AA_READY_MATCH=()
 declare -gA UL2CP_AA_SCREEN_NAME=()
+declare -gA UL2CP_AA_SERVICE=()
 declare -gA UL2CP_GAME_ENABLED=()
 declare -gA UL2CP_GAME_DIR=()
 declare -gA UL2CP_GAME_LOOP=()
@@ -26,6 +28,7 @@ declare -gA UL2CP_GAME_MATCH=()
 declare -gA UL2CP_GAME_LOG=()
 declare -gA UL2CP_GAME_PORT_HINT=()
 declare -gA UL2CP_GAME_READY_MATCH=()
+declare -gA UL2CP_GAME_SERVICE=()
 
 reset_server_vars() {
 	SERVER_ID=""
@@ -39,6 +42,7 @@ reset_server_vars() {
 	LOGIN_LOG="log/stdout.log"
 	LOGIN_PORT_HINT=""
 	LOGIN_READY_MATCH=""
+	LOGIN_SERVICE=""
 
 	AA_ENABLED="false"
 	AA_DIR=""
@@ -49,6 +53,7 @@ reset_server_vars() {
 	AA_PORT_HINT=""
 	AA_READY_MATCH=""
 	AA_SCREEN_NAME=""
+	AA_SERVICE=""
 
 	GAME_ENABLED="false"
 	GAME_DIR=""
@@ -57,6 +62,7 @@ reset_server_vars() {
 	GAME_LOG="log/stdout.log"
 	GAME_PORT_HINT=""
 	GAME_READY_MATCH=""
+	GAME_SERVICE=""
 }
 
 load_server_file() {
@@ -81,6 +87,7 @@ load_server_file() {
 	UL2CP_LOGIN_LOG["$SERVER_ID"]="$LOGIN_LOG"
 	UL2CP_LOGIN_PORT_HINT["$SERVER_ID"]="$LOGIN_PORT_HINT"
 	UL2CP_LOGIN_READY_MATCH["$SERVER_ID"]="$LOGIN_READY_MATCH"
+	UL2CP_LOGIN_SERVICE["$SERVER_ID"]="$LOGIN_SERVICE"
 
 	UL2CP_AA_ENABLED["$SERVER_ID"]="$AA_ENABLED"
 	UL2CP_AA_DIR["$SERVER_ID"]="$AA_DIR"
@@ -91,6 +98,7 @@ load_server_file() {
 	UL2CP_AA_PORT_HINT["$SERVER_ID"]="$AA_PORT_HINT"
 	UL2CP_AA_READY_MATCH["$SERVER_ID"]="$AA_READY_MATCH"
 	UL2CP_AA_SCREEN_NAME["$SERVER_ID"]="$AA_SCREEN_NAME"
+	UL2CP_AA_SERVICE["$SERVER_ID"]="$AA_SERVICE"
 
 	UL2CP_GAME_ENABLED["$SERVER_ID"]="$GAME_ENABLED"
 	UL2CP_GAME_DIR["$SERVER_ID"]="$GAME_DIR"
@@ -99,6 +107,7 @@ load_server_file() {
 	UL2CP_GAME_LOG["$SERVER_ID"]="$GAME_LOG"
 	UL2CP_GAME_PORT_HINT["$SERVER_ID"]="$GAME_PORT_HINT"
 	UL2CP_GAME_READY_MATCH["$SERVER_ID"]="$GAME_READY_MATCH"
+	UL2CP_GAME_SERVICE["$SERVER_ID"]="$GAME_SERVICE"
 }
 
 load_server_configs() {
@@ -115,6 +124,7 @@ load_server_configs() {
 	UL2CP_LOGIN_LOG=()
 	UL2CP_LOGIN_PORT_HINT=()
 	UL2CP_LOGIN_READY_MATCH=()
+	UL2CP_LOGIN_SERVICE=()
 	UL2CP_AA_ENABLED=()
 	UL2CP_AA_DIR=()
 	UL2CP_AA_START=()
@@ -124,6 +134,7 @@ load_server_configs() {
 	UL2CP_AA_PORT_HINT=()
 	UL2CP_AA_READY_MATCH=()
 	UL2CP_AA_SCREEN_NAME=()
+	UL2CP_AA_SERVICE=()
 	UL2CP_GAME_ENABLED=()
 	UL2CP_GAME_DIR=()
 	UL2CP_GAME_LOOP=()
@@ -131,6 +142,7 @@ load_server_configs() {
 	UL2CP_GAME_LOG=()
 	UL2CP_GAME_PORT_HINT=()
 	UL2CP_GAME_READY_MATCH=()
+	UL2CP_GAME_SERVICE=()
 	found=0
 	shopt -s nullglob
 	for file in "$UNIX_L2_CP_SERVER_DIR"/*.conf; do
@@ -237,5 +249,14 @@ component_screen_name() {
 	case "$2" in
 	aa) printf '%s\n' "${UL2CP_AA_SCREEN_NAME[$1]:-}" ;;
 	*) printf '%s\n' "" ;;
+	esac
+}
+
+component_service() {
+	case "$2" in
+	login) printf '%s\n' "${UL2CP_LOGIN_SERVICE[$1]:-}" ;;
+	aa) printf '%s\n' "${UL2CP_AA_SERVICE[$1]:-}" ;;
+	game) printf '%s\n' "${UL2CP_GAME_SERVICE[$1]:-}" ;;
+	*) return 1 ;;
 	esac
 }

@@ -5,7 +5,7 @@ Simple terminal control panel for Lineage 2 login, game, and Active Anticheat pr
 Created by Steve Dog  
 Website: [steve.dog](https://steve.dog)
 
-Current release: `1.2.0`
+Current release: `1.3.0`
 
 ## Languages
 
@@ -24,6 +24,7 @@ Current release: `1.2.0`
 - Opens logs and follows logs live
 - Shows a separate server card with paths, logs, ports, and PIDs
 - Supports separate Active Anticheat folders with `startscreen.sh`
+- Supports optional systemd services for login, game, and AA
 - Works with multiple Lineage 2 server folders
 - Uses config files instead of hardcoded private paths
 - Includes a simple interactive menu
@@ -102,3 +103,14 @@ Notes:
 - `AA_DIR` should point to the separate Anticheat server folder, not the game server folder.
 - The panel starts AA through `sh startscreen.sh`, because this is the common launch style from the official Active Anticheat Linux manual.
 - If your game server uses AA, keep `LD_PRELOAD=$PWD/active_pr64.so` in the game start script as described in the [official manual](https://active-ac.com/manual/ru/lineage2/install_linux/).
+
+## systemd services
+
+If a component is managed by systemd, add its service name to the server config:
+
+```bash
+LOGIN_SERVICE="my-login.service"
+GAME_SERVICE="my-game.service"
+```
+
+You can also use `AA_SERVICE`. Leave these fields empty when the component is managed by its usual start script.

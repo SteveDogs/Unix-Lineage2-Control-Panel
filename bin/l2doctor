@@ -64,6 +64,7 @@ for id in "${UL2CP_SERVER_IDS[@]}"; do
 		check_path "login loop" "$(component_dir "$id" login)/$(component_loop "$id" login)"
 		check_path "login log" "$(component_log_path "$id" login)"
 		printf 'login ready : %s\n' "$(component_ready_match "$id" login | awk 'NF {print; found=1} END {if (!found) print "-"}')"
+		printf 'login service: %s\n' "$(component_service "$id" login | awk 'NF {print; found=1} END {if (!found) print "-"}')"
 		printf 'login status: %s\n' "$(component_status_text "$id" login)"
 	else
 		printf 'login status: DISABLED\n'
@@ -75,6 +76,7 @@ for id in "${UL2CP_SERVER_IDS[@]}"; do
 		check_path "aa loop" "$(component_dir "$id" aa)/$(component_run_loop "$id" aa)"
 		check_path "aa log" "$(component_log_path "$id" aa)"
 		printf 'aa screen   : %s\n' "$(component_screen_name "$id" aa | awk 'NF {print; found=1} END {if (!found) print "-"}')"
+		printf 'aa service  : %s\n' "$(component_service "$id" aa | awk 'NF {print; found=1} END {if (!found) print "-"}')"
 		printf 'aa ready    : %s\n' "$(component_ready_match "$id" aa | awk 'NF {print; found=1} END {if (!found) print "-"}')"
 		printf 'aa status   : %s\n' "$(component_status_text "$id" aa)"
 	else
@@ -86,6 +88,7 @@ for id in "${UL2CP_SERVER_IDS[@]}"; do
 		check_path "game loop" "$(component_dir "$id" game)/$(component_loop "$id" game)"
 		check_path "game log" "$(component_log_path "$id" game)"
 		printf 'game ready  : %s\n' "$(component_ready_match "$id" game | awk 'NF {print; found=1} END {if (!found) print "-"}')"
+		printf 'game service: %s\n' "$(component_service "$id" game | awk 'NF {print; found=1} END {if (!found) print "-"}')"
 		printf 'game status : %s\n' "$(component_status_text "$id" game)"
 	else
 		printf 'game status : DISABLED\n'
