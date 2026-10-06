@@ -447,8 +447,12 @@ component_current_port() {
 
 	pid=$(component_first_pid "$1" "$2") || return 1
 	ports=$(ports_for_pid "$pid")
-	port=$(primary_port "$ports")
 	hint=$(component_port_hint "$1" "$2")
+
+	case ",$ports," in
+	*",$hint,"*) port="$hint" ;;
+	*) port=$(primary_port "$ports") ;;
+	esac
 
 	[ -n "$port" ] || port="$hint"
 	[ -n "$port" ] || return 1
