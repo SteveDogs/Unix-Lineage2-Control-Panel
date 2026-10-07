@@ -80,6 +80,10 @@ config/   Example configs
 docs/     RU / EN / UK docs
 ```
 
+## Project handover
+
+The current release state, deployment procedures, safety rules, and recovery checklist are documented in the [Russian handover guide](docs/HANDOVER.ru.md). Credentials and server addresses are intentionally excluded.
+
 ## Config examples
 
 Examples included in `config/servers.d/`:
